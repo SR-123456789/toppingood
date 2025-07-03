@@ -10,11 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Plus, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { LoginDialog } from "@/components/auth/login-dialog"
+import { ResponsiveLayout } from "@/components/responsive-layout"
 import type { PostWithProfile } from "@/app/page"
-import { FooterNavigation } from "@/components/footer-navigation"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 export default function MyToppingsPage() {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
   const [myPosts, setMyPosts] = useState<PostWithProfile[]>([])
   const [mimickedPosts, setMimickedPosts] = useState<PostWithProfile[]>([])
   const [likedPosts, setLikedPosts] = useState<PostWithProfile[]>([])
@@ -43,26 +44,29 @@ export default function MyToppingsPage() {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // 自分の投稿を取得
+      // 自分の投稿を最新30件のみ取得
       const { data: myPostsData } = await supabase
         .from("posts")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
+        .limit(30) // 最新30件のみ
 
-      // 真似した投稿を取得
+      // 真似した投稿を最新30件のみ取得
       const { data: mimicsData } = await supabase
         .from("mimics")
         .select("post_id")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
+        .limit(30) // 最新30件のみ
 
-      // いいねした投稿を取得
+      // いいねした投稿を最新30件のみ取得
       const { data: likesData } = await supabase
         .from("likes")
         .select("post_id")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
+        .limit(30) // 最新30件のみ
 
       let mimickedPostsData: any[] = []
       let likedPostsData: any[] = []
@@ -132,9 +136,9 @@ export default function MyToppingsPage() {
   }
 
   const PostGrid = ({ posts, emptyMessage }: { posts: PostWithProfile[]; emptyMessage: string }) => (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 lg:gap-4">
       {posts.length === 0 ? (
-        <div className="col-span-3 text-center py-12">
+        <div className="col-span-3 lg:col-span-4 xl:col-span-5 text-center py-12">
           <p className="text-gray-500">{emptyMessage}</p>
         </div>
       ) : (
@@ -189,11 +193,11 @@ export default function MyToppingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <ResponsiveLayout user={user}>
+      {/* モバイル版ヘッダー */}
+      <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-semibold">マイトッピング</h1>
@@ -207,48 +211,68 @@ export default function MyToppingsPage() {
         </div>
       </header>
 
-      {/* メインコンテンツ */}
-      <main className="p-4 pb-20">
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">読み込み中...</p>
+      {/* PC版ヘッダー */}
+      <header className="hidden lg:block bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="px-8 py-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">マイトッピング</h1>
+              <Button
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={() => router.push("/create")}
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                新しいトッピングを投稿
+              </Button>
+            </div>
           </div>
-        ) : (
-          <Tabs defaultValue="my-posts" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="my-posts" className="text-xs">
-                投稿した ({myPosts.length})
-              </TabsTrigger>
-              <TabsTrigger value="mimicked" className="text-xs">
-                真似した ({mimickedPosts.length})
-              </TabsTrigger>
-              <TabsTrigger value="liked" className="text-xs">
-                いいね ({likedPosts.length})
-              </TabsTrigger>
-            </TabsList>
+        </div>
+      </header>
 
-            <TabsContent value="my-posts" className="mt-4">
-              <PostGrid posts={myPosts} emptyMessage="まだ投稿がありません。最初のトッピングを投稿してみましょう！" />
-            </TabsContent>
+      {/* メインコンテンツ */}
+      <main className="p-4 pb-20 lg:pb-8 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">読み込み中...</p>
+            </div>
+          ) : (
+            <Tabs defaultValue="my-posts" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="my-posts" className="text-xs lg:text-sm">
+                  投稿した ({myPosts.length})
+                </TabsTrigger>
+                <TabsTrigger value="mimicked" className="text-xs lg:text-sm">
+                  真似した ({mimickedPosts.length})
+                </TabsTrigger>
+                <TabsTrigger value="liked" className="text-xs lg:text-sm">
+                  いいね ({likedPosts.length})
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="mimicked" className="mt-4">
-              <PostGrid
-                posts={mimickedPosts}
-                emptyMessage="まだ真似したトッピングがありません。気になるトッピングを真似してみましょう！"
-              />
-            </TabsContent>
+              <TabsContent value="my-posts" className="mt-4">
+                <PostGrid posts={myPosts} emptyMessage="まだ投稿がありません。最初のトッピングを投稿してみましょう！" />
+              </TabsContent>
 
-            <TabsContent value="liked" className="mt-4">
-              <PostGrid
-                posts={likedPosts}
-                emptyMessage="まだいいねしたトッピングがありません。気に入ったトッピングにいいねしてみましょう！"
-              />
-            </TabsContent>
-          </Tabs>
-        )}
+              <TabsContent value="mimicked" className="mt-4">
+                <PostGrid
+                  posts={mimickedPosts}
+                  emptyMessage="まだ真似したトッピングがありません。気になるトッピングを真似してみましょう！"
+                />
+              </TabsContent>
+
+              <TabsContent value="liked" className="mt-4">
+                <PostGrid
+                  posts={likedPosts}
+                  emptyMessage="まだいいねしたトッピングがありません。気に入ったトッピングにいいねしてみましょう！"
+                />
+              </TabsContent>
+            </Tabs>
+          )}
+        </div>
       </main>
-      {/* フッターナビゲーション */}
-      <FooterNavigation user={user} />
-    </div>
+
+      <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+    </ResponsiveLayout>
   )
 }

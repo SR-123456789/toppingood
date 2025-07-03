@@ -43,10 +43,21 @@ export default function SearchPage() {
 
   const fetchPosts = async () => {
     try {
-      const { data: posts, error: postsError } = await supabase
+      // 検索クエリがある場合は検索、ない場合は最新50件を取得
+      let query = supabase
         .from("posts")
         .select("*")
         .order("created_at", { ascending: false })
+
+      // 検索クエリがある場合はフィルタリング
+      if (searchQuery) {
+        query = query.or(
+          `menu_name.ilike.%${searchQuery}%,topping_content.ilike.%${searchQuery}%,memo.ilike.%${searchQuery}%`,
+        )
+      }
+
+      // 最大50件に制限
+      const { data: posts, error: postsError } = await query.limit(50)
 
       if (postsError) {
         console.error("Error fetching posts:", postsError)
@@ -58,8 +69,12 @@ export default function SearchPage() {
         return
       }
 
+      // 必要なユーザーIDのみでプロフィールを取得
       const userIds = [...new Set(posts.map((post) => post.user_id))]
-      const { data: profiles } = await supabase.from("profiles").select("*").in("id", userIds)
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url") // 必要なフィールドのみ
+        .in("id", userIds)
 
       const postsWithProfiles: PostWithProfile[] = posts.map((post) => ({
         ...post,

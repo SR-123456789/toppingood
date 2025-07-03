@@ -26,11 +26,12 @@ async function getPosts(): Promise<PostWithProfile[]> {
   const supabase = await createClient()
 
   try {
-    // まず投稿を取得
+    // 投稿を最新20件のみ取得（ページネーション対応）
     const { data: posts, error: postsError } = await supabase
       .from("posts")
       .select("*")
       .order("created_at", { ascending: false })
+      .limit(20) // 最新20件のみ取得
 
     if (postsError) {
       console.error("Error fetching posts:", postsError)
@@ -41,9 +42,12 @@ async function getPosts(): Promise<PostWithProfile[]> {
       return []
     }
 
-    // 次にユーザープロフィールを取得
+    // 必要なユーザーIDのみでプロフィールを取得
     const userIds = [...new Set(posts.map((post) => post.user_id))]
-    const { data: profiles, error: profilesError } = await supabase.from("profiles").select("*").in("id", userIds)
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url") // 必要なフィールドのみ
+      .in("id", userIds)
 
     if (profilesError) {
       console.error("Error fetching profiles:", profilesError)

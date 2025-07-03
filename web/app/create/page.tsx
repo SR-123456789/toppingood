@@ -13,6 +13,9 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Upload, X, CheckCircle, AlertCircle } from "lucide-react"
 import Image from "next/image"
 import { LoginDialog } from "@/components/auth/login-dialog"
+import { ResponsiveLayout } from "@/components/responsive-layout"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
+import "./progress.css"
 
 export default function CreatePostPage() {
   const [menuName, setMenuName] = useState("")
@@ -20,7 +23,7 @@ export default function CreatePostPage() {
   const [memo, setMemo] = useState("")
   const [images, setImages] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [error, setError] = useState("")
@@ -232,11 +235,11 @@ export default function CreatePostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <ResponsiveLayout user={user}>
+      {/* モバイル版ヘッダー */}
+      <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-semibold">新しい投稿</h1>
@@ -244,124 +247,144 @@ export default function CreatePostPage() {
         </div>
       </header>
 
+      {/* PC版ヘッダー */}
+      <header className="hidden lg:block bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="px-8 py-4">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">新しいトッピングを投稿</h1>
+              <Button variant="outline" onClick={() => router.push("/")}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                ホームに戻る
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* メインコンテンツ */}
-      <main className="p-4">
-        <Card className="max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle className="text-center text-orange-600">トッピングを投稿</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* エラー表示 */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="menuName">メニュー名 *</Label>
-                <Input
-                  id="menuName"
-                  placeholder="例：カップヌードル"
-                  value={menuName}
-                  onChange={(e) => setMenuName(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="toppingContent">トッピング内容 *</Label>
-                <Input
-                  id="toppingContent"
-                  placeholder="例：キムチ + 粉チーズ"
-                  value={toppingContent}
-                  onChange={(e) => setToppingContent(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="memo">味メモ（任意）</Label>
-                <Textarea
-                  id="memo"
-                  placeholder="どんな味だった？おすすめポイントは？"
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                  rows={3}
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>写真（最大3枚、各5MB以下）</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative aspect-square">
-                      <Image
-                        src={URL.createObjectURL(image) || "/placeholder.svg"}
-                        alt={`アップロード画像 ${index + 1}`}
-                        fill
-                        className="object-cover rounded-lg"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 w-6 h-6"
-                        onClick={() => removeImage(index)}
-                        disabled={loading}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  {images.length < 3 && (
-                    <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-400 disabled:cursor-not-allowed">
-                      <Upload className="w-6 h-6 text-gray-400" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        disabled={loading}
-                      />
-                    </label>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500">JPG、PNG、GIF形式に対応。各ファイル5MB以下。</p>
-              </div>
-
-              {/* アップロード進行状況 */}
-              {Object.keys(uploadProgress).length > 0 && (
-                <div className="space-y-2">
-                  <Label>アップロード中...</Label>
-                  {Object.entries(uploadProgress).map(([fileId, progress]) => (
-                    <div key={fileId} className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  ))}
+      <main className="p-4 pb-20 lg:pb-8 lg:px-8">
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center lg:text-left text-orange-600">
+                トッピングを投稿
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* エラー表示 */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <p className="text-red-700 text-sm">{error}</p>
                 </div>
               )}
 
-              <Button
-                type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={loading || !menuName || !toppingContent}
-              >
-                {loading ? "投稿中..." : "投稿する"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="menuName">メニュー名 *</Label>
+                  <Input
+                    id="menuName"
+                    placeholder="例：カップヌードル"
+                    value={menuName}
+                    onChange={(e) => setMenuName(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="toppingContent">トッピング内容 *</Label>
+                  <Input
+                    id="toppingContent"
+                    placeholder="例：キムチ + 粉チーズ"
+                    value={toppingContent}
+                    onChange={(e) => setToppingContent(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="memo">味メモ（任意）</Label>
+                  <Textarea
+                    id="memo"
+                    placeholder="どんな味だった？おすすめポイントは？"
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    rows={3}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>写真（最大3枚、各5MB以下）</Label>
+                  <div className="grid grid-cols-3 gap-2 lg:gap-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative aspect-square">
+                        <Image
+                          src={URL.createObjectURL(image) || "/placeholder.svg"}
+                          alt={`アップロード画像 ${index + 1}`}
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 w-6 h-6"
+                          onClick={() => removeImage(index)}
+                          disabled={loading}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {images.length < 3 && (
+                      <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-400 disabled:cursor-not-allowed">
+                        <Upload className="w-6 h-6 text-gray-400" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          disabled={loading}
+                          aria-label="画像をアップロード"
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">JPG、PNG、GIF形式に対応。各ファイル5MB以下。</p>
+                </div>
+
+                {/* アップロード進行状況 */}
+                {Object.keys(uploadProgress).length > 0 && (
+                  <div className="space-y-2">
+                    <Label>アップロード中...</Label>
+                    {Object.entries(uploadProgress).map(([fileId, progress]) => (
+                      <div key={fileId} className="progress-bar">
+                        <div
+                          className="progress-bar-fill"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-orange-500 hover:bg-orange-600"
+                  disabled={loading || !menuName || !toppingContent}
+                >
+                  {loading ? "投稿中..." : "投稿する"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </main>
-    </div>
+    </ResponsiveLayout>
   )
 }

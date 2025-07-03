@@ -1,0 +1,14 @@
+/* プログレスバーのスタイル */
+.progress-bar {
+  width: 100%;
+  background-color: #e5e7eb;
+  border-radius: 9999px;
+  height: 0.5rem;
+}
+
+.progress-bar-fill {
+  background-color: #f97316;
+  height: 0.5rem;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}

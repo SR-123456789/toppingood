@@ -36,12 +36,33 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
 
       try {
         setIsLoading(true)
-        const { data: likes } = await supabase.from("likes").select("post_id").eq("user_id", user.id)
+        
+        // 表示されている投稿のIDのみを対象にする
+        const postIds = posts.map(post => post.id)
+        
+        if (postIds.length === 0) {
+          setIsLoading(false)
+          return
+        }
+
+        // 表示中の投稿のみでいいねを取得
+        const { data: likes } = await supabase
+          .from("likes")
+          .select("post_id")
+          .eq("user_id", user.id)
+          .in("post_id", postIds) // 表示中の投稿のみ
+        
         if (likes) {
           setLikedPosts(likes.map((like) => like.post_id))
         }
 
-        const { data: mimics } = await supabase.from("mimics").select("post_id").eq("user_id", user.id)
+        // 表示中の投稿のみで真似を取得
+        const { data: mimics } = await supabase
+          .from("mimics")
+          .select("post_id")
+          .eq("user_id", user.id)
+          .in("post_id", postIds) // 表示中の投稿のみ
+        
         if (mimics) {
           setMimickedPosts(mimics.map((mimic) => mimic.post_id))
         }
@@ -54,7 +75,7 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
     }
 
     fetchUserInteractions()
-  }, [user, supabase])
+  }, [user, posts, supabase]) // postsも依存関係に追加
 
   // プロフィールの存在確認と作成
   const ensureProfile = async (userId: string) => {
