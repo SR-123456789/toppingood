@@ -19,11 +19,13 @@ interface HomeContainerProps {
 }
 
 export function HomeContainer({ user: initialUser, initialPosts }: HomeContainerProps) {
-  const [posts, setPosts] = useState<PostWithProfile[]>(initialPosts)
+  const [posts, setPosts] = useState<PostWithProfile[]>(initialPosts || [])
   const [likedPosts, setLikedPosts] = useState<string[]>([])
   const [mimickedPosts, setMimickedPosts] = useState<string[]>([])
   const [user, setUser] = useState<SupabaseUser | null>(initialUser)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -32,14 +34,22 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
     const fetchUserInteractions = async () => {
       if (!user) return
 
-      const { data: likes } = await supabase.from("likes").select("post_id").eq("user_id", user.id)
-      if (likes) {
-        setLikedPosts(likes.map((like) => like.post_id))
-      }
+      try {
+        setIsLoading(true)
+        const { data: likes } = await supabase.from("likes").select("post_id").eq("user_id", user.id)
+        if (likes) {
+          setLikedPosts(likes.map((like) => like.post_id))
+        }
 
-      const { data: mimics } = await supabase.from("mimics").select("post_id").eq("user_id", user.id)
-      if (mimics) {
-        setMimickedPosts(mimics.map((mimic) => mimic.post_id))
+        const { data: mimics } = await supabase.from("mimics").select("post_id").eq("user_id", user.id)
+        if (mimics) {
+          setMimickedPosts(mimics.map((mimic) => mimic.post_id))
+        }
+      } catch (error) {
+        console.error("Error fetching user interactions:", error)
+        setError("ユーザーデータの取得に失敗しました")
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -171,7 +181,21 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
       />
 
       <main className="pb-20 lg:pb-0 lg:py-8">
-        {posts.length === 0 ? (
+        {error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+            >
+              再読み込み
+            </button>
+          </div>
+        ) : isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">読み込み中...</p>
+          </div>
+        ) : posts.length === 0 ? (
           <EmptyState
             message="まだ投稿がありません"
             actionLabel="最初の投稿をしてみよう！"

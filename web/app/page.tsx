@@ -77,28 +77,43 @@ async function getUser() {
 }
 
 export default async function HomePage() {
-  // テーブルの存在確認
-  const tablesExist = await checkTablesExist()
+  try {
+    // テーブルの存在確認
+    const tablesExist = await checkTablesExist()
 
-  if (!tablesExist) {
+    if (!tablesExist) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-orange-600 mb-4">ToppinGOOD</h1>
+            <p className="text-gray-600 mb-4">データベースの初期化が必要です</p>
+            <p className="text-sm text-gray-500">
+              管理者にお問い合わせください。
+              <br />
+              SQLスクリプトを実行してデータベースを設定する必要があります。
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    const user = await getUser()
+    const posts = await getPosts()
+
+    // ログイン状態に関係なく投稿を表示
+    return <HomeClient user={user} initialPosts={posts} />
+  } catch (error) {
+    console.error("Error in HomePage:", error)
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8">
           <h1 className="text-2xl font-bold text-orange-600 mb-4">ToppinGOOD</h1>
-          <p className="text-gray-600 mb-4">データベースの初期化が必要です</p>
+          <p className="text-gray-600 mb-4">エラーが発生しました</p>
           <p className="text-sm text-gray-500">
-            管理者にお問い合わせください。
-            <br />
-            SQLスクリプトを実行してデータベースを設定する必要があります。
+            ページを再読み込みしてください。
           </p>
         </div>
       </div>
     )
   }
-
-  const user = await getUser()
-  const posts = await getPosts()
-
-  // ログイン状態に関係なく投稿を表示
-  return <HomeClient user={user} initialPosts={posts} />
 }

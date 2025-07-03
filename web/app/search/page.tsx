@@ -11,6 +11,7 @@ import { ArrowLeft, Search, Filter } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { ResponsiveLayout } from "@/components/responsive-layout"
 import type { PostWithProfile } from "@/app/page"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 const POPULAR_TAGS = ["カップヌードル", "白米", "アイスクリーム", "パン", "サラダ", "パスタ", "ラーメン", "おにぎり"]
 
@@ -20,7 +21,7 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTag, setSelectedTag] = useState("")
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -115,7 +116,7 @@ export default function SearchPage() {
       {/* モバイル版ヘッダー */}
       <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center gap-3 px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1 relative">
