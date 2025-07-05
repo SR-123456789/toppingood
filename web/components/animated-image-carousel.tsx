@@ -87,6 +87,7 @@ export function AnimatedImageCarousel({
       if (intervalRef.current) clearInterval(intervalRef.current)
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPlay, interval, displayImages.length, currentIndex])
 
   return (

@@ -48,6 +48,7 @@ export default function PostDetailPage() {
       fetchPost(params.id as string)
       checkUser()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id])
 
   const checkUser = async () => {

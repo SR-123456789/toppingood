@@ -28,10 +28,12 @@ export default function SearchPage() {
   useEffect(() => {
     fetchPosts()
     checkUser()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     filterPosts()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedTag, posts])
 
   const checkUser = async () => {
