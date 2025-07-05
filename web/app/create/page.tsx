@@ -14,6 +14,7 @@ import { ArrowLeft, Upload, X, CheckCircle, AlertCircle } from "lucide-react"
 import Image from "next/image"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
+import { ensureProfile } from "@/lib/profile-utils"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import "./progress.css"
 
@@ -44,25 +45,6 @@ export default function CreatePostPage() {
     }
     getUser()
   }, [supabase])
-
-  // プロフィールの存在確認と作成
-  const ensureProfile = async (userId: string) => {
-    const { data: profile } = await supabase.from("profiles").select("id").eq("id", userId).single()
-
-    if (!profile) {
-      // プロフィールが存在しない場合は作成
-      const { error } = await supabase.from("profiles").insert({
-        id: userId,
-        username: `user_${userId.substring(0, 8)}`,
-        display_name: "ユーザー",
-      })
-
-      if (error) {
-        console.error("Error creating profile:", error)
-        throw error
-      }
-    }
-  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])

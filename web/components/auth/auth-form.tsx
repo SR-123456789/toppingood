@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { generateUniqueUsername, generateDisplayName } from "@/lib/username-generator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,8 +15,6 @@ import { useRouter } from "next/navigation"
 export function AuthForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [username, setUsername] = useState("")
-  const [displayName, setDisplayName] = useState("")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
   const router = useRouter()
@@ -27,6 +26,20 @@ export function AuthForm() {
     setMessage("")
 
     try {
+      // ユニークなユーザー名を生成
+      const checkUsernameExists = async (username: string): Promise<boolean> => {
+        const { data } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("username", username)
+          .single()
+        
+        return !!data
+      }
+
+      const username = await generateUniqueUsername(checkUsernameExists)
+      const displayName = generateDisplayName()
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -113,26 +126,6 @@ export function AuthForm() {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">ユーザー名</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">表示名</Label>
-                  <Input
-                    id="displayName"
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="email">メールアドレス</Label>
                   <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
@@ -145,6 +138,9 @@ export function AuthForm() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                </div>
+                <div className="text-sm text-gray-600 bg-orange-50 p-3 rounded-lg">
+                  💡 ユーザー名と表示名は自動で素敵なものを生成します！
                 </div>
                 <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={loading}>
                   {loading ? "登録中..." : "新規登録"}

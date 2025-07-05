@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { FooterNavigation } from "@/components/footer-navigation"
 import { ResponsiveLayout } from "@/components/responsive-layout"
+import { ensureProfile } from "@/lib/profile-utils"
 import type { PostWithProfile } from "@/app/page"
 import { AnimatedImageCarousel } from "@/components/animated-image-carousel"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -106,23 +107,6 @@ export default function PostDetailPage() {
       console.error("Error in fetchPost:", error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const ensureProfile = async (userId: string) => {
-    const { data: profile } = await supabase.from("profiles").select("id").eq("id", userId).single()
-
-    if (!profile) {
-      const { error } = await supabase.from("profiles").insert({
-        id: userId,
-        username: `user_${userId.substring(0, 8)}`,
-        display_name: "ユーザー",
-      })
-
-      if (error) {
-        console.error("Error creating profile:", error)
-        throw error
-      }
     }
   }
 

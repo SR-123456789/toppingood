@@ -3,13 +3,14 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
 import { MobileHeader } from "@/components/ui/mobile-header"
 import { PostList } from "@/components/ui/post-list"
 import { EmptyState } from "@/components/ui/empty-state"
+import { ensureProfile } from "@/lib/profile-utils"
 import type { PostWithProfile } from "@/app/page"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -26,8 +27,27 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showAuthSuccessMessage, setShowAuthSuccessMessage] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // 認証成功メッセージの表示チェック
+  useEffect(() => {
+    const authSuccess = searchParams.get('auth')
+    if (authSuccess === 'success') {
+      setShowAuthSuccessMessage(true)
+      // URLパラメータをクリア
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('auth')
+      window.history.replaceState({}, '', newUrl.toString())
+      
+      // 3秒後にメッセージを非表示
+      setTimeout(() => {
+        setShowAuthSuccessMessage(false)
+      }, 3000)
+    }
+  }, [searchParams])
 
   // ユーザーのいいねと真似した投稿を取得
   useEffect(() => {
@@ -76,24 +96,6 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
 
     fetchUserInteractions()
   }, [user, posts, supabase]) // postsも依存関係に追加
-
-  // プロフィールの存在確認と作成
-  const ensureProfile = async (userId: string) => {
-    const { data: profile } = await supabase.from("profiles").select("id").eq("id", userId).single()
-
-    if (!profile) {
-      const { error } = await supabase.from("profiles").insert({
-        id: userId,
-        username: `user_${userId.substring(0, 8)}`,
-        display_name: "ユーザー",
-      })
-
-      if (error) {
-        console.error("Error creating profile:", error)
-        throw error
-      }
-    }
-  }
 
   const requireLogin = (action: () => void) => {
     if (!user) {
@@ -236,6 +238,18 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
       </main>
 
       <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+      
+      {/* 認証成功メッセージ */}
+      {showAuthSuccessMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>ログインが完了しました！ToppinGOODへようこそ 🎉</span>
+          </div>
+        </div>
+      )}
     </ResponsiveLayout>
   )
 }
