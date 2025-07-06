@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
 import { MobileHeader } from "@/components/ui/mobile-header"
@@ -99,6 +100,7 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
 
   const requireLogin = (action: () => void) => {
     if (!user) {
+      triggerHapticFeedback('light') // ログインダイアログ表示は軽めのフィードバック
       setShowLoginDialog(true)
       return
     }
@@ -107,6 +109,9 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
 
   const handleLike = async (postId: string, event: React.MouseEvent) => {
     event.stopPropagation()
+    
+    // いいねボタンには軽めの触覚フィードバック
+    triggerHapticFeedback('light')
 
     if (!user) {
       setShowLoginDialog(true)
@@ -136,6 +141,9 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
 
   const handleMimic = async (postId: string, event: React.MouseEvent) => {
     event.stopPropagation()
+    
+    // 真似するボタンには中程度の触覚フィードバック（重要なアクション）
+    triggerHapticFeedback('medium')
 
     if (!user) {
       setShowLoginDialog(true)
@@ -167,6 +175,7 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
 
   const handleCreatePost = () => {
     requireLogin(() => {
+      triggerHapticFeedback('medium') // 投稿作成は重要なアクション
       router.push("/create")
     })
   }
@@ -180,6 +189,8 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
   }
 
   const handlePostClick = (postId: string) => {
+    // 投稿詳細表示には軽めの触覚フィードバック
+    triggerHapticFeedback('light')
     router.push(`/post/${postId}`)
   }
 

@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { generateUniqueUsername, generateDisplayName } from "@/lib/username-generator"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +23,7 @@ export function AuthForm() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    triggerHapticFeedback('medium') // サインアップボタンは重要なアクション
     setLoading(true)
     setMessage("")
 
@@ -65,6 +67,7 @@ export function AuthForm() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    triggerHapticFeedback('medium') // サインインボタンは重要なアクション
     setLoading(true)
     setMessage("")
 

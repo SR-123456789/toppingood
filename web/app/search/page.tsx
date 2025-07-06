@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Search, Filter } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { ResponsiveLayout } from "@/components/responsive-layout"
 import type { PostWithProfile } from "@/app/page"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -117,6 +118,9 @@ export default function SearchPage() {
   }
 
   const handleTagClick = (tag: string) => {
+    // タグクリックには軽めの触覚フィードバック
+    triggerHapticFeedback('light')
+    
     if (selectedTag === tag) {
       setSelectedTag("")
     } else {
@@ -125,6 +129,8 @@ export default function SearchPage() {
   }
 
   const handlePostClick = (post: PostWithProfile) => {
+    // 投稿詳細表示には軽めの触覚フィードバック
+    triggerHapticFeedback('light')
     router.push(`/post/${post.id}`)
   }
 
@@ -133,7 +139,10 @@ export default function SearchPage() {
       {/* モバイル版ヘッダー */}
       <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center gap-3 px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
+          <Button variant="ghost" size="icon" onClick={() => {
+            triggerHapticFeedback('medium') // 戻るボタンには中程度のフィードバック
+            router.push("/")
+          }}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1 relative">

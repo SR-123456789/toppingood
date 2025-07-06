@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Heart, MessageCircle, Share2, ArrowLeft } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { FooterNavigation } from "@/components/footer-navigation"
 import { ResponsiveLayout } from "@/components/responsive-layout"
@@ -112,6 +113,9 @@ export default function PostDetailPage() {
   }
 
   const handleLike = async () => {
+    // いいねボタンには軽めの触覚フィードバック
+    triggerHapticFeedback('light')
+    
     if (!user) {
       setShowLoginDialog(true)
       return
@@ -137,6 +141,9 @@ export default function PostDetailPage() {
   }
 
   const handleMimic = async () => {
+    // 真似するボタンには中程度の触覚フィードバック（重要なアクション）
+    triggerHapticFeedback('medium')
+    
     if (!user) {
       setShowLoginDialog(true)
       return
@@ -162,6 +169,9 @@ export default function PostDetailPage() {
   }
 
   const handleShare = async () => {
+    // シェアボタンには軽めの触覚フィードバック
+    triggerHapticFeedback('light')
+    
     if (navigator.share) {
       try {
         await navigator.share({
@@ -215,7 +225,10 @@ export default function PostDetailPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="text-gray-500 mb-4">投稿が見つかりませんでした</p>
-          <Button onClick={() => router.back()} className="bg-orange-500 hover:bg-orange-600">
+          <Button onClick={() => {
+            triggerHapticFeedback('medium')
+            router.back()
+          }} className="bg-orange-500 hover:bg-orange-600">
             戻る
           </Button>
         </div>
@@ -229,7 +242,10 @@ export default function PostDetailPage() {
         {/* ヘッダー（モバイル版のみ） */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-10 lg:hidden">
           <div className="flex items-center justify-between px-4 py-3 max-w-4xl mx-auto">
-            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <Button variant="ghost" size="icon" onClick={() => {
+              triggerHapticFeedback('medium')
+              router.back()
+            }}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-lg font-semibold">投稿詳細</h1>

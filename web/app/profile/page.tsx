@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Edit, Save, X, Camera, Users, Heart, ChefHat } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -137,6 +138,8 @@ export default function ProfilePage() {
   }
 
   const handleSave = async () => {
+    triggerHapticFeedback('medium') // プロフィール保存は重要なアクション
+    
     if (!user || !profile) return
 
     setSaving(true)
@@ -170,6 +173,8 @@ export default function ProfilePage() {
   }
 
   const handleCancel = () => {
+    triggerHapticFeedback('light') // キャンセルは軽めのフィードバック
+    
     setEditForm({
       display_name: profile?.display_name || "",
       username: profile?.username || "",
@@ -179,6 +184,7 @@ export default function ProfilePage() {
   }
 
   const handleLogout = async () => {
+    triggerHapticFeedback('heavy') // ログアウトは重要なアクション
     await supabase.auth.signOut()
     router.push("/")
   }
@@ -206,7 +212,10 @@ export default function ProfilePage() {
       {/* モバイル版ヘッダー */}
       <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
+          <Button variant="ghost" size="icon" onClick={() => {
+            triggerHapticFeedback('medium') // 戻るボタンには中程度のフィードバック
+            router.push("/")
+          }}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-semibold">マイページ</h1>
@@ -220,7 +229,10 @@ export default function ProfilePage() {
               </Button>
             </div>
           ) : (
-            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+            <Button variant="ghost" size="icon" onClick={() => {
+              triggerHapticFeedback('light') // 編集開始は軽めのフィードバック
+              setIsEditing(true)
+            }}>
               <Edit className="w-5 h-5" />
             </Button>
           )}
@@ -245,7 +257,10 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               ) : (
-                <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Button variant="outline" onClick={() => {
+                  triggerHapticFeedback('light')
+                  setIsEditing(true)
+                }}>
                   <Edit className="w-4 h-4 mr-2" />
                   編集
                 </Button>

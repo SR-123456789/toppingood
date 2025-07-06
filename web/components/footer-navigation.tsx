@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Home, Search, ChefHat, User } from "lucide-react"
 import { LoginDialog } from "@/components/auth/login-dialog"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface FooterNavigationProps {
@@ -18,6 +19,7 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
 
   const requireLogin = (action: () => void) => {
     if (!user) {
+      triggerHapticFeedback('light') // ログインダイアログ表示は軽めのフィードバック
       setShowLoginDialog(true)
       return
     }
@@ -41,7 +43,10 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/")}
+            onClick={() => {
+              triggerHapticFeedback('medium')
+              router.push("/")
+            }}
             className={`flex flex-col items-center gap-1 p-3 ${
               activeTab === "home" ? "text-orange-600" : "text-gray-600"
             }`}
@@ -52,7 +57,10 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/search")}
+            onClick={() => {
+              triggerHapticFeedback('medium')
+              router.push("/search")
+            }}
             className={`flex flex-col items-center gap-1 p-3 ${
               activeTab === "search" ? "text-orange-600" : "text-gray-600"
             }`}
@@ -65,6 +73,7 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
             size="sm"
             onClick={() =>
               requireLogin(() => {
+                triggerHapticFeedback('medium')
                 router.push("/my-toppings")
               })
             }
@@ -80,6 +89,7 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
             size="sm"
             onClick={() =>
               requireLogin(() => {
+                triggerHapticFeedback('medium')
                 router.push("/profile")
               })
             }

@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { generateUniqueUsername, generateDisplayName } from "@/lib/username-generator"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,6 +27,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    triggerHapticFeedback('medium')
     setLoading(true)
     setMessage("")
 
@@ -69,6 +71,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    triggerHapticFeedback('medium')
     setLoading(true)
     setMessage("")
 

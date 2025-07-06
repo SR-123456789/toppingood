@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Plus, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
 import type { PostWithProfile } from "@/app/page"
@@ -147,7 +148,10 @@ export default function MyToppingsPage() {
           <Card
             key={post.id}
             className="cursor-pointer hover:shadow-md transition-shadow border-0"
-            onClick={() => router.push(`/post/${post.id}`)}
+            onClick={() => {
+              triggerHapticFeedback('light') // 投稿詳細表示は軽めのフィードバック
+              router.push(`/post/${post.id}`)
+            }}
           >
             <CardContent className="p-0">
               <div className="relative aspect-square">
@@ -198,14 +202,20 @@ export default function MyToppingsPage() {
       {/* モバイル版ヘッダー */}
       <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
+          <Button variant="ghost" size="icon" onClick={() => {
+            triggerHapticFeedback('medium') // 戻るボタンには中程度のフィードバック
+            router.push("/")
+          }}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-semibold">マイトッピング</h1>
           <Button
             size="icon"
             className="bg-orange-500 hover:bg-orange-600 text-white rounded-full"
-            onClick={() => router.push("/create")}
+            onClick={() => {
+              triggerHapticFeedback('medium') // 新規投稿は重要なアクション
+              router.push("/create")
+            }}
           >
             <Plus className="w-5 h-5" />
           </Button>
@@ -220,7 +230,10 @@ export default function MyToppingsPage() {
               <h1 className="text-2xl font-bold text-gray-900">マイトッピング</h1>
               <Button
                 className="bg-orange-500 hover:bg-orange-600 text-white"
-                onClick={() => router.push("/create")}
+                onClick={() => {
+                  triggerHapticFeedback('medium')
+                  router.push("/create")
+                }}
               >
                 <Plus className="w-5 h-5 mr-2" />
                 新しいトッピングを投稿

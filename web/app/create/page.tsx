@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -79,6 +80,8 @@ export default function CreatePostPage() {
   }
 
   const removeImage = (index: number) => {
+    // 画像削除には軽めの触覚フィードバック
+    triggerHapticFeedback('light')
     setImages(images.filter((_, i) => i !== index))
     setError("")
   }
@@ -122,6 +125,10 @@ export default function CreatePostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 投稿ボタンには重要なアクションなので強めの触覚フィードバック
+    triggerHapticFeedback('heavy')
+    
     if (!user) {
       setShowLoginDialog(true)
       return
@@ -221,7 +228,10 @@ export default function CreatePostPage() {
       {/* モバイル版ヘッダー */}
       <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
+          <Button variant="ghost" size="icon" onClick={() => {
+            triggerHapticFeedback('medium') // 戻るボタンには中程度のフィードバック
+            router.push("/")
+          }}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-semibold">新しい投稿</h1>
@@ -235,7 +245,10 @@ export default function CreatePostPage() {
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">新しいトッピングを投稿</h1>
-              <Button variant="outline" onClick={() => router.push("/")}>
+              <Button variant="outline" onClick={() => {
+                triggerHapticFeedback('medium')
+                router.push("/")
+              }}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 ホームに戻る
               </Button>
