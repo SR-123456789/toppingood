@@ -6,6 +6,8 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { triggerHapticFeedback } from "@/lib/haptic-feedback"
+import { autoSignInNative, createAutoAccountAndLogin } from "@/lib/native-auth"
+import { isNativeApp } from "@/lib/platform-utils"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
 import { MobileHeader } from "@/components/ui/mobile-header"
@@ -29,9 +31,82 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showAuthSuccessMessage, setShowAuthSuccessMessage] = useState(false)
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // ネイティブアプリでの自動認証
+  useEffect(() => {
+    const handleNativeAuth = async () => {
+      if (isNativeApp()) {
+        console.log('🔍 ネイティブアプリ起動時の自動認証開始')
+        console.log('📊 初期ユーザー状態:', !!initialUser)
+        
+        try {
+          // まず現在のセッションを確認
+          const { data: { session } } = await supabase.auth.getSession()
+          console.log('📊 現在のセッション:', !!session)
+          
+          if (session && session.user) {
+            console.log('✅ 既存セッションあり、ユーザー情報を更新')
+            setUser(session.user)
+            return
+          }
+          
+          // セッションがない場合、localStorageから認証情報を取得して直接ログイン
+          if (typeof window !== 'undefined') {
+            const savedAccount = localStorage.getItem('toppifygo_native_account')
+            console.log('💾 localStorage認証情報:', !!savedAccount)
+            
+            if (savedAccount) {
+              try {
+                const accountInfo = JSON.parse(savedAccount)
+                if (accountInfo.email && accountInfo.password && accountInfo.created) {
+                  console.log('🔑 localStorageから直接ログイン試行:', accountInfo.email)
+                  
+                  const { data, error } = await supabase.auth.signInWithPassword({
+                    email: accountInfo.email,
+                    password: accountInfo.password,
+                  })
+                  
+                  if (!error && data.user) {
+                    console.log('✅ 直接ログイン成功')
+                    setUser(data.user)
+                    setShowAuthSuccessMessage(true)
+                    setTimeout(() => setShowAuthSuccessMessage(false), 3000)
+                    return
+                  } else {
+                    console.log('❌ 直接ログイン失敗:', error?.message)
+                    // 認証情報が無効な場合はクリア
+                    if (error?.message.includes('Invalid login credentials')) {
+                      localStorage.removeItem('toppifygo_native_account')
+                      console.log('🗑️ 無効な認証情報をクリアしました')
+                    }
+                  }
+                }
+              } catch (parseError) {
+                console.error('localStorage解析エラー:', parseError)
+              }
+            } else {
+
+              const result = await autoSignInNative()
+
+              if(result.success) {
+                location.reload()
+              }
+
+            }
+          }
+          
+        } catch (error) {
+          console.error('自動認証でエラーが発生:', error)
+        }
+      }
+    }
+
+    handleNativeAuth()
+  }, [supabase, initialUser])
 
   // 認証成功メッセージの表示チェック
   useEffect(() => {
@@ -225,6 +300,12 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
               再読み込み
             </button>
           </div>
+        ) : isCreatingAccount ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p className="text-gray-500">アカウントを作成中...</p>
+            <p className="text-sm text-gray-400 mt-2">しばらくお待ちください</p>
+          </div>
         ) : isLoading ? (
           <div className="text-center py-12">
             <p className="text-gray-500">読み込み中...</p>
@@ -248,7 +329,18 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
         )}
       </main>
 
-      <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+      <LoginDialog 
+        open={showLoginDialog} 
+        onOpenChange={setShowLoginDialog}
+        onSuccess={(loggedInUser) => {
+          console.log('🎉 ログイン成功、ユーザー状態を更新:', loggedInUser?.email)
+          if (loggedInUser) {
+            setUser(loggedInUser)
+            setShowAuthSuccessMessage(true)
+            setTimeout(() => setShowAuthSuccessMessage(false), 3000)
+          }
+        }}
+      />
       
       {/* 認証成功メッセージ */}
       {showAuthSuccessMessage && (
