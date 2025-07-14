@@ -1,0 +1,49 @@
+{
+  "name": "toppifygo-rag",
+  "version": "1.0.0",
+  "description": "包括的RAGシステム for ToppifyGO",
+  "main": "src/index.js",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "index": "node scripts/index-codebase.js",
+    "serve": "node src/api/server.js",
+    "dev": "nodemon src/api/server.js",
+    "embeddings": "node scripts/generate-embeddings.js",
+    "search": "node scripts/search.js",
+    "chat": "node src/chat/interactive.js",
+    "start": "npm run setup && npm run chat",
+    "quick-start": "npm install && npm run start"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@pinecone-database/pinecone": "^1.1.2",
+    "openai": "^4.24.0",
+    "langchain": "^0.1.0",
+    "@langchain/openai": "^0.0.14",
+    "@langchain/community": "^0.0.20",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.3.10",
+    "marked": "^11.1.1",
+    "pdf-parse": "^1.1.1",
+    "cheerio": "^1.0.0-rc.12",
+    "tiktoken": "^1.0.10",
+    "uuid": "^9.0.1",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "rag",
+    "copilot",
+    "embeddings",
+    "vector-search",
+    "ai",
+    "langchain"
+  ]
+}
