@@ -185,3 +185,14 @@ Supabase Auth → DB Trigger → Profile Created → Auto Login
 - 画像アップロード・処理機能
 - リアルタイム通知
 - ネイティブ版とWeb版でのUI/UX差別化
+
+## コンポーネント設計
+
+ToppifyGOでは、ロジックと描画を分離する設計を採用しています。
+
+- **ロジック**: `~~Container` と命名し、ロジックやデータ取得を担当します。
+  - 例: `HomeContainer`, `PostCardContainer`
+- **描画**: コンポーネント名そのままを使用し、UI描画を担当します。
+  - 例: `Home`, `PostCard`
+
+この設計により、ロジックとUIの責務を明確に分離し、再利用性と保守性を向上させています。
