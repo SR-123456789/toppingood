@@ -17,13 +17,16 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const requireLogin = (action: () => void) => {
-    if (!user) {
-      triggerHapticFeedback('light') // ログインダイアログ表示は軽めのフィードバック
+  const handleTabNavigation = (path: string, requiresAuth: boolean = false) => {
+    triggerHapticFeedback('medium')
+    
+    if (requiresAuth && !user) {
+      triggerHapticFeedback('light')
       setShowLoginDialog(true)
       return
     }
-    action()
+    
+    router.push(path)
   }
 
   const getActiveTab = () => {
@@ -43,10 +46,7 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              triggerHapticFeedback('medium')
-              router.push("/")
-            }}
+            onClick={() => handleTabNavigation("/")}
             className={`flex flex-col items-center gap-1 p-3 ${
               activeTab === "home" ? "text-orange-600" : "text-gray-600"
             }`}
@@ -57,10 +57,7 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              triggerHapticFeedback('medium')
-              router.push("/search")
-            }}
+            onClick={() => handleTabNavigation("/search")}
             className={`flex flex-col items-center gap-1 p-3 ${
               activeTab === "search" ? "text-orange-600" : "text-gray-600"
             }`}
@@ -71,12 +68,7 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
-              requireLogin(() => {
-                triggerHapticFeedback('medium')
-                router.push("/my-toppings")
-              })
-            }
+            onClick={() => handleTabNavigation("/my-toppings", true)}
             className={`flex flex-col items-center gap-1 p-3 ${
               activeTab === "my-topping" ? "text-orange-600" : "text-gray-600"
             }`}
@@ -87,18 +79,13 @@ export function FooterNavigation({ user }: FooterNavigationProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
-              requireLogin(() => {
-                triggerHapticFeedback('medium')
-                router.push("/profile")
-              })
-            }
+            onClick={() => handleTabNavigation("/profile", true)}
             className={`flex flex-col items-center gap-1 p-3 ${
               activeTab === "profile" ? "text-orange-600" : "text-gray-600"
             }`}
           >
             <User className="w-5 h-5" />
-            <span className="text-xs">マイページ</span>
+            <span className="text-xs">プロフィール</span>
           </Button>
         </div>
       </nav>
