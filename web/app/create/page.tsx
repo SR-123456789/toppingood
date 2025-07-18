@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Upload, X, CheckCircle, AlertCircle } from "lucide-react"
+import { ArrowLeft, Upload, X, CheckCircle, AlertCircle, Plus, Clock, DollarSign, Tag } from "lucide-react"
 import Image from "next/image"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
@@ -24,6 +24,12 @@ export default function CreatePostPage() {
   const [toppingContent, setToppingContent] = useState("")
   const [memo, setMemo] = useState("")
   const [images, setImages] = useState<File[]>([])
+  const [cookingTime, setCookingTime] = useState<number | null>(null)
+  const [budget, setBudget] = useState<number | null>(null)
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState("")
+  const [shouldClearTagInput, setShouldClearTagInput] = useState(false)
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false)
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
@@ -46,6 +52,14 @@ export default function CreatePostPage() {
     }
     getUser()
   }, [supabase])
+
+  // タグ入力クリア用のuseEffect
+  useEffect(() => {
+    if (shouldClearTagInput) {
+      setTagInput('')
+      setShouldClearTagInput(false)
+    }
+  }, [shouldClearTagInput])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -168,6 +182,9 @@ export default function CreatePostPage() {
         topping_content: toppingContent,
         memo: memo || null,
         image_urls: imageUrls,
+        cooking_time: cookingTime,
+        budget: budget,
+        tags: tags.length > 0 ? tags : null,
       })
 
       if (postError) {
@@ -194,6 +211,92 @@ export default function CreatePostPage() {
   const handleLoginSuccess = () => {
     // ログイン成功後、ページをリロードしてユーザー状態を更新
     window.location.reload()
+  }
+
+  const handleTagsChange = (value: string) => {
+    setTagInput(value)
+    
+    // 一気に貼り付けされた場合の処理（カンマ、スペース、#区切りを検知）
+    if (value.includes(',') || value.includes(' ') || value.includes('#')) {
+      // 複数の区切り文字で分割して処理
+      const newTags = value
+        .split(/[,\s#]+/) // カンマ、スペース、#で分割
+        .map(tag => tag.trim())
+        .filter(tag => tag && tag !== '') // 空文字を除外
+        .filter(tag => !tags.includes(tag)) // 重複を除外
+      
+      if (newTags.length > 0) {
+        console.log('Bulk adding tags:', newTags)
+        setTags([...tags, ...newTags])
+        setShouldClearTagInput(true)
+      }
+    }
+  }
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    console.log('Key pressed:', e.key, 'Current input:', tagInput)
+    
+    // Enterキーまたはカンマキーでタグを追加
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      e.stopPropagation()
+      const currentValue = tagInput.trim()
+      console.log('Trying to add tag:', currentValue)
+      
+      if (currentValue && !tags.includes(currentValue)) {
+        console.log('Adding tag:', currentValue)
+        setTags([...tags, currentValue])
+        // useEffect を使用してクリア
+        setShouldClearTagInput(true)
+      } else {
+        console.log('Tag not added - empty or duplicate')
+        // 重複や空の場合でもクリア
+        setShouldClearTagInput(true)
+      }
+    }
+    // BackspaceキーでInputが空の場合は最後のタグを削除
+    else if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+      e.preventDefault()
+      const newTags = [...tags]
+      newTags.pop()
+      setTags(newTags)
+    }
+  }
+
+  const handleTagInputBlur = () => {
+    // フォーカスが外れた時にも入力中のタグを追加
+    const currentValue = tagInput.trim()
+    if (currentValue && !tags.includes(currentValue)) {
+      setTags([...tags, currentValue])
+      setShouldClearTagInput(true)
+    }
+  }
+
+  const removeTag = (indexToRemove: number) => {
+    setTags(tags.filter((_, index) => index !== indexToRemove))
+  }
+
+  const handleTagPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text')
+    console.log('Pasted text:', pastedText)
+    
+    // 区切り文字が含まれている場合はペーストを処理
+    if (pastedText.includes(',') || pastedText.includes(' ') || pastedText.includes('#')) {
+      e.preventDefault()
+      
+      // 複数の区切り文字で分割して処理
+      const newTags = pastedText
+        .split(/[,\s#]+/) // カンマ、スペース、#で分割
+        .map(tag => tag.trim())
+        .filter(tag => tag && tag !== '') // 空文字を除外
+        .filter(tag => !tags.includes(tag)) // 重複を除外
+      
+      if (newTags.length > 0) {
+        console.log('Paste adding tags:', newTags)
+        setTags([...tags, ...newTags])
+        setShouldClearTagInput(true)
+      }
+    }
   }
 
   if (!user) {
@@ -312,6 +415,105 @@ export default function CreatePostPage() {
                   />
                 </div>
 
+                {/* 詳細情報の展開ボタン */}
+                {!showAdditionalFields && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowAdditionalFields(true)}
+                    className="w-full"
+                    disabled={loading}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    詳細情報を追加（調理時間・予算・タグ）
+                  </Button>
+                )}
+
+                {/* 追加フィールド */}
+                {showAdditionalFields && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+                    {/* 調理時間 */}
+                    <div className="space-y-2">
+                      <Label htmlFor="cooking-time" className="flex items-center">
+                        <Clock className="w-4 h-4 mr-2" />
+                        調理時間（分）
+                      </Label>
+                      <Input
+                        id="cooking-time"
+                        type="number"
+                        placeholder="例: 30"
+                        value={cookingTime || ""}
+                        onChange={(e) => setCookingTime(e.target.value ? Number(e.target.value) : null)}
+                        disabled={loading}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* 予算 */}
+                    <div className="space-y-2">
+                      <Label htmlFor="budget" className="flex items-center">
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        予算（円）
+                      </Label>
+                      <Input
+                        id="budget"
+                        type="number"
+                        placeholder="例: 500"
+                        value={budget || ""}
+                        onChange={(e) => setBudget(e.target.value ? Number(e.target.value) : null)}
+                        disabled={loading}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* タグ */}
+                    <div className="space-y-2">
+                      <Label htmlFor="tags" className="flex items-center">
+                        <Tag className="w-4 h-4 mr-2" />
+                        タグ
+                      </Label>
+                      <Input
+                        id="tags"
+                        placeholder="タグを入力・貼り付けしてEnterキーまたはカンマで追加"
+                        value={tagInput}
+                        onChange={(e) => handleTagsChange(e.target.value)}
+                        onKeyDown={handleTagKeyDown}
+                        onBlur={handleTagInputBlur}
+                        onPaste={handleTagPaste}
+                        disabled={loading}
+                        className="mt-1"
+                      />
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {tags.map((tag, index) => (
+                            <span 
+                              key={index}
+                              className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm flex items-center gap-1 cursor-pointer hover:bg-orange-200"
+                              onClick={() => removeTag(index)}
+                            >
+                              #{tag}
+                              <X className="w-3 h-3" />
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Enterキーまたはカンマ（,）でタグを追加。「簡単, 節約, #朝食」のような一括貼り付けも対応。タグをクリックして削除。
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setShowAdditionalFields(false)}
+                      className="w-full"
+                      disabled={loading}
+                    >
+                      詳細情報を閉じる
+                    </Button>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>写真（最大3枚、各5MB以下）</Label>
                   <div className="grid grid-cols-3 gap-2 lg:gap-4">
@@ -361,7 +563,7 @@ export default function CreatePostPage() {
                       <div key={fileId} className="progress-bar">
                         <div
                           className="progress-bar-fill"
-                          style={{ width: `${progress}%` }}
+                          data-progress={progress}
                         />
                       </div>
                     ))}

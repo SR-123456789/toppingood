@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Heart, MessageCircle, Share2, ArrowLeft } from "lucide-react"
+import { Heart, MessageCircle, Share2, ArrowLeft, Clock, DollarSign, Tag } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { LoginDialog } from "@/components/auth/login-dialog"
@@ -306,6 +306,39 @@ export default function PostDetailPage() {
                           className="text-gray-700 leading-relaxed" 
                         />
                       )}
+
+                      {/* 詳細情報（調理時間・予算・タグ） */}
+                      {(post.cooking_time || post.budget || (post.tags && post.tags.length > 0)) && (
+                        <div className="mt-4 space-y-3 p-3 bg-gray-50 rounded-lg">
+                          {post.cooking_time && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Clock className="w-4 h-4 mr-2" />
+                              <span>調理時間: {post.cooking_time}分</span>
+                            </div>
+                          )}
+                          {post.budget && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <DollarSign className="w-4 h-4 mr-2" />
+                              <span>予算: {post.budget}円</span>
+                            </div>
+                          )}
+                          {post.tags && post.tags.length > 0 && (
+                            <div className="flex items-start text-sm text-gray-600">
+                              <Tag className="w-4 h-4 mr-2 mt-0.5" />
+                              <div className="flex flex-wrap gap-1">
+                                {post.tags.map((tag, index) => (
+                                  <span 
+                                    key={index}
+                                    className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs"
+                                  >
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* アクションボタン */}
@@ -412,6 +445,39 @@ export default function PostDetailPage() {
                             text={post.memo} 
                             className="text-gray-700 leading-relaxed text-lg" 
                           />
+                        )}
+
+                        {/* 詳細情報（調理時間・予算・タグ）PC版 */}
+                        {(post.cooking_time || post.budget || (post.tags && post.tags.length > 0)) && (
+                          <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg">
+                            {post.cooking_time && (
+                              <div className="flex items-center text-gray-600">
+                                <Clock className="w-5 h-5 mr-3" />
+                                <span className="text-lg">調理時間: {post.cooking_time}分</span>
+                              </div>
+                            )}
+                            {post.budget && (
+                              <div className="flex items-center text-gray-600">
+                                <DollarSign className="w-5 h-5 mr-3" />
+                                <span className="text-lg">予算: {post.budget}円</span>
+                              </div>
+                            )}
+                            {post.tags && post.tags.length > 0 && (
+                              <div className="flex items-start text-gray-600">
+                                <Tag className="w-5 h-5 mr-3 mt-1" />
+                                <div className="flex flex-wrap gap-2">
+                                  {post.tags.map((tag, index) => (
+                                    <span 
+                                      key={index}
+                                      className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm"
+                                    >
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
 

@@ -40,6 +40,9 @@ export interface Database {
           image_urls: string[]
           mimic_count: number
           like_count: number
+          cooking_time: number | null
+          budget: number | null
+          tags: string[] | null
           created_at: string
           updated_at: string
         }
@@ -52,6 +55,9 @@ export interface Database {
           image_urls?: string[]
           mimic_count?: number
           like_count?: number
+          cooking_time?: number | null
+          budget?: number | null
+          tags?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -64,6 +70,9 @@ export interface Database {
           image_urls?: string[]
           mimic_count?: number
           like_count?: number
+          cooking_time?: number | null
+          budget?: number | null
+          tags?: string[] | null
           created_at?: string
           updated_at?: string
         }

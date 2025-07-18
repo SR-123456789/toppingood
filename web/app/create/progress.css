@@ -12,3 +12,20 @@
   border-radius: 9999px;
   transition: width 0.3s ease;
 }
+
+.progress-bar-fill[data-progress] {
+  width: calc(var(--progress, 0) * 1%);
+}
+
+/* プログレス値をCSS変数として設定 */
+.progress-bar-fill[data-progress="0"] { --progress: 0; }
+.progress-bar-fill[data-progress="10"] { --progress: 10; }
+.progress-bar-fill[data-progress="20"] { --progress: 20; }
+.progress-bar-fill[data-progress="30"] { --progress: 30; }
+.progress-bar-fill[data-progress="40"] { --progress: 40; }
+.progress-bar-fill[data-progress="50"] { --progress: 50; }
+.progress-bar-fill[data-progress="60"] { --progress: 60; }
+.progress-bar-fill[data-progress="70"] { --progress: 70; }
+.progress-bar-fill[data-progress="80"] { --progress: 80; }
+.progress-bar-fill[data-progress="90"] { --progress: 90; }
+.progress-bar-fill[data-progress="100"] { --progress: 100; }
