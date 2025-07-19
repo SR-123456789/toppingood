@@ -67,29 +67,29 @@ export function PostCard({ post, isLiked, isMimicked, onLike, onMimic, onPostCli
           </div>
 
           {/* アクションボタン */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onLike}
-                className={`${isLiked ? "text-red-500" : "text-gray-600"} hover:scale-105 transition-transform`}
+                className={`${isLiked ? "text-red-500" : "text-gray-600"} hover:scale-105 transition-transform flex-shrink-0`}
               >
-                <Heart className={`w-5 h-5 mr-1 ${isLiked ? "fill-current" : ""}`} />
-                {post.like_count}
+                <Heart className={`w-4 h-4 sm:w-5 sm:h-5 mr-1 ${isLiked ? "fill-current" : ""}`} />
+                <span className="hidden sm:inline">{post.like_count}</span>
+                <span className="sm:hidden">{post.like_count}</span>
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-600 hover:scale-105 transition-transform">
-                <MessageCircle className="w-5 h-5 mr-1" />
-                コメント
+              <Button variant="ghost" size="sm" className="text-gray-600 hover:scale-105 transition-transform flex-shrink-0">
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-gray-600 hover:scale-105 transition-transform">
-                <Share2 className="w-5 h-5 mr-1" />
-                シェア
+              <Button variant="ghost" size="sm" className="text-gray-600 hover:scale-105 transition-transform flex-shrink-0">
+                <Share2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1" />
+                <span className="text-xs sm:text-sm">共有</span>
               </Button>
             </div>
             <Button
               onClick={onMimic}
-              className={`text-sm px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+              className={`text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 rounded-full transition-all duration-300 hover:scale-105 whitespace-nowrap flex-shrink-0 ${
                 isMimicked
                   ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
                   : "bg-orange-500 hover:bg-orange-600 text-white"

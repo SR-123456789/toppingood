@@ -388,37 +388,36 @@ export default function PostDetailPage() {
                     {/* アクションボタン */}
                     <div className="border-t pt-4">
                       {/* メインアクション行 */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-6">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={handleLike}
-                            className={isLiked ? "text-red-500" : "text-gray-600"}
+                            className={`${isLiked ? "text-red-500" : "text-gray-600"} hover:scale-105 transition-transform flex-shrink-0`}
                           >
-                            <Heart className={`w-6 h-6 mr-2 ${isLiked ? "fill-current" : ""}`} />
-                            {post.like_count}
+                            <Heart className={`w-4 h-4 sm:w-5 sm:h-5 mr-1 ${isLiked ? "fill-current" : ""}`} />
+                            <span className="text-xs sm:text-sm">{post.like_count}</span>
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-gray-600">
-                            <MessageCircle className="w-6 h-6 mr-2" />
-                            {comments.length}
+                          <Button variant="ghost" size="sm" className="text-gray-600 hover:scale-105 transition-transform flex-shrink-0">
+                            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1" />
+                            <span className="text-xs sm:text-sm">{comments.length}</span>
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={handleShare} className="text-gray-600">
-                            <Share2 className="w-6 h-6" />
+                          <Button variant="ghost" size="sm" onClick={handleShare} className="text-gray-600 hover:scale-105 transition-transform flex-shrink-0">
+                            <Share2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1" />
+                            <span className="text-xs sm:text-sm">共有</span>
                           </Button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={handleMimic}
-                            className={`px-6 py-2 rounded-full ${
-                              isMimicked
-                                ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
-                                : "bg-orange-500 hover:bg-orange-600 text-white"
-                            }`}
-                          >
-                            {isMimicked ? "真似済み" : "真似する"}
-                          </Button>
-                        </div>
+                        <Button
+                          onClick={handleMimic}
+                          className={`text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 rounded-full transition-all duration-300 hover:scale-105 whitespace-nowrap flex-shrink-0 ${
+                            isMimicked
+                              ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
+                              : "bg-orange-500 hover:bg-orange-600 text-white"
+                          }`}
+                        >
+                          {isMimicked ? "真似済み" : "真似する"}
+                        </Button>
                       </div>
 
                       {/* 投稿者のみ表示：編集・削除ボタン */}
@@ -558,36 +557,40 @@ export default function PostDetailPage() {
                       {/* アクションボタン（PC版） */}
                       <div className="border-t pt-6">
                         {/* メインアクション行 */}
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-8">
+                        <div className="space-y-4 mb-4">
+                          {/* アクションボタン行 */}
+                          <div className="flex items-center gap-6">
                             <Button
                               variant="ghost"
                               size="lg"
                               onClick={handleLike}
-                              className={isLiked ? "text-red-500" : "text-gray-600"}
+                              className={`${isLiked ? "text-red-500" : "text-gray-600"} hover:scale-105 transition-transform flex-shrink-0`}
                             >
-                              <Heart className={`w-7 h-7 mr-3 ${isLiked ? "fill-current" : ""}`} />
-                              <span className="text-lg">{post.like_count}</span>
+                              <Heart className={`w-6 h-6 mr-2 ${isLiked ? "fill-current" : ""}`} />
+                              <span className="text-base">{post.like_count}</span>
                             </Button>
-                            <Button variant="ghost" size="lg" className="text-gray-600">
-                              <MessageCircle className="w-7 h-7 mr-3" />
-                              <span className="text-lg">{comments.length}</span>
+                            <Button variant="ghost" size="lg" className="text-gray-600 hover:scale-105 transition-transform flex-shrink-0">
+                              <MessageCircle className="w-6 h-6 mr-2" />
+                              <span className="text-base">{comments.length}</span>
                             </Button>
-                            <Button variant="ghost" size="lg" onClick={handleShare} className="text-gray-600">
-                              <Share2 className="w-7 h-7" />
+                            <Button variant="ghost" size="lg" onClick={handleShare} className="text-gray-600 hover:scale-105 transition-transform flex-shrink-0">
+                              <Share2 className="w-6 h-6 mr-2" />
+                              <span className="text-base">共有</span>
                             </Button>
                           </div>
-                          <Button
-                            onClick={handleMimic}
-                            size="lg"
-                            className={`px-8 py-3 rounded-full text-lg ${
-                              isMimicked
-                                ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
-                                : "bg-orange-500 hover:bg-orange-600 text-white"
-                            }`}
-                          >
-                            {isMimicked ? "真似済み" : "真似する"}
-                          </Button>
+                          {/* 真似するボタン行 */}
+                          <div className="flex justify-end">
+                            <Button
+                              onClick={handleMimic}
+                              className={`text-sm px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 whitespace-nowrap ${
+                                isMimicked
+                                  ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
+                                  : "bg-orange-500 hover:bg-orange-600 text-white"
+                              }`}
+                            >
+                              {isMimicked ? "真似済み" : "真似する"}
+                            </Button>
+                          </div>
                         </div>
 
                         {/* 投稿者のみ表示：編集・削除ボタン（PC版） */}
