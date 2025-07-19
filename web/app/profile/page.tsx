@@ -59,23 +59,37 @@ export default function ProfilePage() {
   }, [])
 
   const checkUser = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    if (!user) {
-      setShowLoginDialog(true)
-      return
+      if (!user) {
+        setShowLoginDialog(true)
+        setLoading(false)
+        return
+      }
+
+      setUser(user)
+      
+      // プロフィールと統計を並列取得
+      await Promise.all([
+        fetchUserProfile(user.id),
+        fetchUserStats(user.id)
+      ])
+    } catch (error) {
+      console.error("Error in checkUser:", error)
+      setLoading(false)
     }
-
-    setUser(user)
-    await fetchUserProfile(user.id)
-    await fetchUserStats(user.id)
   }
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
+        .eq("id", userId)
+        .single()
 
       if (error) {
         console.error("Error fetching profile:", error)
@@ -90,41 +104,34 @@ export default function ProfilePage() {
       })
     } catch (error) {
       console.error("Error in fetchUserProfile:", error)
-    } finally {
-      setLoading(false)
     }
   }
 
   const fetchUserStats = async (userId: string) => {
     try {
-      // 統計情報を並列で取得（countクエリを使用）
-      const [postsResult, mimicsResult, likesResult, userPostsResult] = await Promise.all([
+      // より効率的な統計取得
+      const [postsResult, mimicsResult, likesResult] = await Promise.all([
         // 投稿数
         supabase
           .from("posts")
-          .select("*", { count: "exact", head: true })
+          .select("id, mimic_count", { count: "exact" })
           .eq("user_id", userId),
         
         // 真似した数
         supabase
           .from("mimics")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact" })
           .eq("user_id", userId),
         
         // いいねした数
         supabase
           .from("likes")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userId),
-        
-        // 真似された数用の投稿データ（mimic_countのみ）
-        supabase
-          .from("posts")
-          .select("mimic_count")
+          .select("id", { count: "exact" })
           .eq("user_id", userId)
       ])
 
-      const mimickedCount = userPostsResult.data?.reduce((total, post) => total + post.mimic_count, 0) || 0
+      // 真似された合計数を計算
+      const mimickedCount = postsResult.data?.reduce((total, post) => total + (post.mimic_count || 0), 0) || 0
 
       setStats({
         postsCount: postsResult.count || 0,
@@ -134,6 +141,8 @@ export default function ProfilePage() {
       })
     } catch (error) {
       console.error("Error fetching user stats:", error)
+    } finally {
+      setLoading(false)
     }
   }
 

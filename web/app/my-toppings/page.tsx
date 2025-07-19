@@ -31,101 +31,91 @@ export default function MyToppingsPage() {
   }, [])
 
   const checkUser = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    if (!user) {
-      setShowLoginDialog(true)
-      return
+      if (!user) {
+        setShowLoginDialog(true)
+        setLoading(false)
+        return
+      }
+
+      setUser(user)
+      await fetchUserData(user.id)
+    } catch (error) {
+      console.error("Error in checkUser:", error)
+      setLoading(false)
     }
-
-    setUser(user)
-    await fetchUserData(user.id)
   }
 
   const fetchUserData = async (userId: string) => {
     try {
-      // 自分の投稿を最新30件のみ取得
-      const { data: myPostsData } = await supabase
-        .from("posts")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(30) // 最新30件のみ
+      // 必要最小限のフィールドのみを取得し、並列実行で高速化
+      const [myPostsResult, mimicsResult, likesResult] = await Promise.all([
+        // 自分の投稿（最新15件のみ）
+        supabase
+          .from("posts")
+          .select("id, menu_name, topping_content, image_urls, mimic_count, like_count, created_at, user_id")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(15),
 
-      // 真似した投稿を最新30件のみ取得
-      const { data: mimicsData } = await supabase
-        .from("mimics")
-        .select("post_id")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(30) // 最新30件のみ
+        // 真似した投稿（最新15件のみ）- JOINで一括取得
+        supabase
+          .from("mimics")
+          .select(`
+            posts!inner(
+              id, menu_name, topping_content, image_urls, mimic_count, like_count, created_at, user_id
+            )
+          `)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(15),
 
-      // いいねした投稿を最新30件のみ取得
-      const { data: likesData } = await supabase
-        .from("likes")
-        .select("post_id")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(30) // 最新30件のみ
+        // いいねした投稿（最新15件のみ）- JOINで一括取得
+        supabase
+          .from("likes")
+          .select(`
+            posts!inner(
+              id, menu_name, topping_content, image_urls, mimic_count, like_count, created_at, user_id
+            )
+          `)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(15)
+      ])
 
-      let mimickedPostsData: any[] = []
-      let likedPostsData: any[] = []
+      // プロフィール情報を取得（必要な投稿のユーザーのみ）
+      const allPosts = [
+        ...(myPostsResult.data || []),
+        ...(mimicsResult.data?.map((m: any) => m.posts).filter(Boolean) || []),
+        ...(likesResult.data?.map((l: any) => l.posts).filter(Boolean) || [])
+      ]
 
-      // 真似した投稿の詳細を取得
-      if (mimicsData && mimicsData.length > 0) {
-        const mimicPostIds = mimicsData.map((mimic) => mimic.post_id)
-        const { data: fetchedMimickedPostsData } = await supabase.from("posts").select("*").in("id", mimicPostIds)
-
-        if (fetchedMimickedPostsData) {
-          mimickedPostsData = fetchedMimickedPostsData
-        }
-      }
-
-      // いいねした投稿の詳細を取得
-      if (likesData && likesData.length > 0) {
-        const likePostIds = likesData.map((like) => like.post_id)
-        const { data: fetchedLikedPostsData } = await supabase.from("posts").select("*").in("id", likePostIds)
-
-        if (fetchedLikedPostsData) {
-          likedPostsData = fetchedLikedPostsData
-        }
-      }
-
-      // プロフィール情報を取得
-      const allPosts = [...(myPostsData || []), ...(mimickedPostsData || []), ...(likedPostsData || [])]
-      const userIds = [...new Set(allPosts.map((post) => post.user_id))]
+      const userIds = [...new Set(allPosts.map((post: any) => post.user_id))]
+      let profiles: any[] = []
 
       if (userIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("*").in("id", userIds)
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, avatar_url")
+          .in("id", userIds)
 
-        // プロフィール情報を結合
-        setMyPosts(
-          (myPostsData || []).map((post) => ({
-            ...post,
-            profile: profiles?.find((profile) => profile.id === post.user_id) || null,
-          })),
-        )
-
-        setMimickedPosts(
-          mimickedPostsData.map((post) => ({
-            ...post,
-            profile: profiles?.find((profile) => profile.id === post.user_id) || null,
-          })),
-        )
-
-        setLikedPosts(
-          likedPostsData.map((post) => ({
-            ...post,
-            profile: profiles?.find((profile) => profile.id === post.user_id) || null,
-          })),
-        )
-      } else {
-        setMyPosts((myPostsData || []).map((post) => ({ ...post, profile: null })))
-        setMimickedPosts([])
-        setLikedPosts([])
+        profiles = profilesData || []
       }
+
+      // データをPostWithProfile形式に変換
+      const createPostWithProfile = (post: any) => ({
+        ...post,
+        profile: profiles.find((profile) => profile.id === post.user_id) || null,
+      })
+
+      setMyPosts((myPostsResult.data || []).map(createPostWithProfile))
+      setMimickedPosts((mimicsResult.data?.map((m: any) => m.posts).filter(Boolean) || []).map(createPostWithProfile))
+      setLikedPosts((likesResult.data?.map((l: any) => l.posts).filter(Boolean) || []).map(createPostWithProfile))
+
     } catch (error) {
       console.error("Error fetching user data:", error)
     } finally {
