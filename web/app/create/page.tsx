@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,7 @@ export default function CreatePostPage() {
   const [toppingContent, setToppingContent] = useState("")
   const [memo, setMemo] = useState("")
   const [images, setImages] = useState<File[]>([])
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([])
   const [cookingTime, setCookingTime] = useState<number | null>(null)
   const [budget, setBudget] = useState<number | null>(null)
   const [tags, setTags] = useState<string[]>([])
@@ -36,7 +37,10 @@ export default function CreatePostPage() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editPostId, setEditPostId] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   useEffect(() => {
@@ -50,8 +54,50 @@ export default function CreatePostPage() {
       }
       setUser(user)
     }
+    
+    const loadPostForEdit = async (postId: string) => {
+      try {
+        const { data: post, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', postId)
+          .single()
+
+        if (error) {
+          console.error('Error loading post:', error)
+          setError('投稿の読み込みに失敗しました')
+          return
+        }
+
+        // フォームに既存データを設定
+        setMenuName(post.menu_name || '')
+        setToppingContent(post.topping_content || '')
+        setMemo(post.memo || '')
+        setCookingTime(post.cooking_time)
+        setBudget(post.budget)
+        setTags(post.tags || [])
+        setExistingImageUrls(post.image_urls || [])
+        
+        // 追加フィールドが入力されている場合は表示
+        if (post.cooking_time || post.budget || (post.tags && post.tags.length > 0)) {
+          setShowAdditionalFields(true)
+        }
+      } catch (error) {
+        console.error('Error in loadPostForEdit:', error)
+        setError('投稿の読み込みに失敗しました')
+      }
+    }
+
     getUser()
-  }, [supabase])
+
+    // 編集モードかチェック
+    const editId = searchParams.get('edit')
+    if (editId) {
+      setIsEditMode(true)
+      setEditPostId(editId)
+      loadPostForEdit(editId)
+    }
+  }, [searchParams, supabase])
 
   // タグ入力クリア用のuseEffect
   useEffect(() => {
@@ -156,8 +202,8 @@ export default function CreatePostPage() {
       // プロフィールの存在確認と作成
       await ensureProfile(user.id)
 
-      // 画像をアップロード
-      const imageUrls: string[] = []
+      // 画像をアップロード（新しい画像がある場合のみ）
+      const imageUrls: string[] = [...existingImageUrls] // 既存画像URLを保持
 
       if (images.length > 0) {
         for (const image of images) {
@@ -170,14 +216,12 @@ export default function CreatePostPage() {
             imageUrls.push("/placeholder.svg?height=300&width=300")
           }
         }
-      } else {
-        // 画像がない場合はプレースホルダーを使用
+      } else if (!isEditMode && imageUrls.length === 0) {
+        // 新規投稿で画像がない場合はプレースホルダーを使用
         imageUrls.push("/placeholder.svg?height=300&width=300")
       }
 
-      // 投稿を作成
-      const { error: postError } = await supabase.from("posts").insert({
-        user_id: user.id,
+      const postData = {
         menu_name: menuName,
         topping_content: toppingContent,
         memo: memo || null,
@@ -185,19 +229,43 @@ export default function CreatePostPage() {
         cooking_time: cookingTime,
         budget: budget,
         tags: tags.length > 0 ? tags : null,
-      })
+      }
 
-      if (postError) {
-        console.error("Post creation error:", postError)
-        throw new Error(`投稿の作成に失敗しました: ${postError.message}`)
+      if (isEditMode && editPostId) {
+        // 編集モード: 投稿を更新
+        const { error: updateError } = await supabase
+          .from("posts")
+          .update(postData)
+          .eq('id', editPostId)
+          .eq('user_id', user.id) // 本人確認
+
+        if (updateError) {
+          console.error("Post update error:", updateError)
+          throw new Error(`投稿の更新に失敗しました: ${updateError.message}`)
+        }
+      } else {
+        // 新規作成モード: 投稿を作成
+        const { error: postError } = await supabase.from("posts").insert({
+          user_id: user.id,
+          ...postData,
+        })
+
+        if (postError) {
+          console.error("Post creation error:", postError)
+          throw new Error(`投稿の作成に失敗しました: ${postError.message}`)
+        }
       }
 
       // 成功状態を表示
       setSuccess(true)
 
-      // 2秒後にホームページにリダイレクト
+      // 2秒後にリダイレクト
       setTimeout(() => {
-        router.push("/")
+        if (isEditMode && editPostId) {
+          router.push(`/post/${editPostId}`)
+        } else {
+          router.push("/")
+        }
         router.refresh()
       }, 2000)
     } catch (error: any) {
@@ -318,9 +386,15 @@ export default function CreatePostPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-green-600 mb-2">投稿完了！</h2>
-          <p className="text-gray-600 mb-4">トッピングが正常に投稿されました</p>
-          <p className="text-sm text-gray-500">ホーム画面に戻ります...</p>
+          <h2 className="text-2xl font-bold text-green-600 mb-2">
+            {isEditMode ? '更新完了！' : '投稿完了！'}
+          </h2>
+          <p className="text-gray-600 mb-4">
+            {isEditMode ? 'トッピングが正常に更新されました' : 'トッピングが正常に投稿されました'}
+          </p>
+          <p className="text-sm text-gray-500">
+            {isEditMode ? '投稿詳細に戻ります...' : 'ホーム画面に戻ります...'}
+          </p>
         </div>
       </div>
     )
@@ -366,7 +440,7 @@ export default function CreatePostPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-center lg:text-left text-orange-600">
-                トッピングを投稿
+                {isEditMode ? 'トッピングを編集' : 'トッピングを投稿'}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -575,7 +649,10 @@ export default function CreatePostPage() {
                   className="w-full bg-orange-500 hover:bg-orange-600"
                   disabled={loading || !menuName || !toppingContent}
                 >
-                  {loading ? "投稿中..." : "投稿する"}
+                  {loading 
+                    ? (isEditMode ? "更新中..." : "投稿中...") 
+                    : (isEditMode ? "更新する" : "投稿する")
+                  }
                 </Button>
               </form>
             </CardContent>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Heart, MessageCircle, Share2, ArrowLeft, Clock, DollarSign, Tag } from "lucide-react"
+import { Heart, MessageCircle, Share2, ArrowLeft, Clock, DollarSign, Tag, Edit2, Trash2, MoreVertical } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { LoginDialog } from "@/components/auth/login-dialog"
@@ -190,27 +190,71 @@ export default function PostDetailPage() {
     }
   }
 
-  const nextImage = () => {
-    if (post && post.image_urls && currentImageIndex < post.image_urls.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1)
+  // 投稿編集機能
+  const handleEdit = () => {
+    triggerHapticFeedback('medium')
+    if (post) {
+      router.push(`/create?edit=${post.id}`)
     }
   }
 
-  const prevImage = () => {
-    if (currentImageIndex > 0) {
-      setCurrentImageIndex(currentImageIndex - 1)
+  // 投稿削除機能
+  const handleDelete = async () => {
+    if (!post || !user) return
+
+    const confirmed = confirm('この投稿を削除しますか？この操作は取り消せません。')
+    if (!confirmed) return
+
+    triggerHapticFeedback('heavy')
+    
+    try {
+      setLoading(true)
+      
+      // 関連データも削除（いいね、真似、コメント）
+      await supabase.from('likes').delete().eq('post_id', post.id)
+      await supabase.from('mimics').delete().eq('post_id', post.id)
+      await supabase.from('comments').delete().eq('post_id', post.id)
+      
+      // 投稿を削除
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', post.id)
+        .eq('user_id', user.id) // 本人確認
+
+      if (error) {
+        console.error('Error deleting post:', error)
+        alert('削除に失敗しました')
+        return
+      }
+
+      alert('投稿を削除しました')
+      router.push('/')
+    } catch (error) {
+      console.error('Error in handleDelete:', error)
+      alert('削除に失敗しました')
+    } finally {
+      setLoading(false)
     }
   }
 
+  // 投稿の所有者かチェック
+  const isOwner = user && post && user.id === post.user_id
+
+  // 時間フォーマット関数
   const formatTimeAgo = (dateString: string) => {
     const now = new Date()
     const postDate = new Date(dateString)
     const diffInHours = Math.floor((now.getTime() - postDate.getTime()) / (1000 * 60 * 60))
 
-    if (diffInHours < 1) return "たった今"
-    if (diffInHours < 24) return `${diffInHours}時間前`
-    const diffInDays = Math.floor(diffInHours / 24)
-    return `${diffInDays}日前`
+    if (diffInHours < 1) {
+      return "1時間以内"
+    } else if (diffInHours < 24) {
+      return `${diffInHours}時間前`
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24)
+      return `${diffInDays}日前`
+    }
   }
 
   if (loading) {
@@ -342,35 +386,65 @@ export default function PostDetailPage() {
                     </div>
 
                     {/* アクションボタン */}
-                    <div className="flex items-center justify-between border-t pt-4">
-                      <div className="flex items-center gap-6">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleLike}
-                          className={isLiked ? "text-red-500" : "text-gray-600"}
-                        >
-                          <Heart className={`w-6 h-6 mr-2 ${isLiked ? "fill-current" : ""}`} />
-                          {post.like_count}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-gray-600">
-                          <MessageCircle className="w-6 h-6 mr-2" />
-                          {comments.length}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={handleShare} className="text-gray-600">
-                          <Share2 className="w-6 h-6" />
-                        </Button>
+                    <div className="border-t pt-4">
+                      {/* メインアクション行 */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-6">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleLike}
+                            className={isLiked ? "text-red-500" : "text-gray-600"}
+                          >
+                            <Heart className={`w-6 h-6 mr-2 ${isLiked ? "fill-current" : ""}`} />
+                            {post.like_count}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-gray-600">
+                            <MessageCircle className="w-6 h-6 mr-2" />
+                            {comments.length}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={handleShare} className="text-gray-600">
+                            <Share2 className="w-6 h-6" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={handleMimic}
+                            className={`px-6 py-2 rounded-full ${
+                              isMimicked
+                                ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
+                                : "bg-orange-500 hover:bg-orange-600 text-white"
+                            }`}
+                          >
+                            {isMimicked ? "真似済み" : "真似する"}
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        onClick={handleMimic}
-                        className={`px-6 py-2 rounded-full ${
-                          isMimicked
-                            ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
-                            : "bg-orange-500 hover:bg-orange-600 text-white"
-                        }`}
-                      >
-                        {isMimicked ? "真似済み" : "真似する"}
-                      </Button>
+
+                      {/* 投稿者のみ表示：編集・削除ボタン */}
+                      {isOwner && (
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleEdit}
+                            className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4 mr-1" />
+                            編集
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDelete}
+                            className="text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            disabled={loading}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            {loading ? "削除中..." : "削除"}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -482,36 +556,64 @@ export default function PostDetailPage() {
                       </div>
 
                       {/* アクションボタン（PC版） */}
-                      <div className="flex items-center justify-between border-t pt-6">
-                        <div className="flex items-center gap-8">
+                      <div className="border-t pt-6">
+                        {/* メインアクション行 */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-8">
+                            <Button
+                              variant="ghost"
+                              size="lg"
+                              onClick={handleLike}
+                              className={isLiked ? "text-red-500" : "text-gray-600"}
+                            >
+                              <Heart className={`w-7 h-7 mr-3 ${isLiked ? "fill-current" : ""}`} />
+                              <span className="text-lg">{post.like_count}</span>
+                            </Button>
+                            <Button variant="ghost" size="lg" className="text-gray-600">
+                              <MessageCircle className="w-7 h-7 mr-3" />
+                              <span className="text-lg">{comments.length}</span>
+                            </Button>
+                            <Button variant="ghost" size="lg" onClick={handleShare} className="text-gray-600">
+                              <Share2 className="w-7 h-7" />
+                            </Button>
+                          </div>
                           <Button
-                            variant="ghost"
+                            onClick={handleMimic}
                             size="lg"
-                            onClick={handleLike}
-                            className={isLiked ? "text-red-500" : "text-gray-600"}
+                            className={`px-8 py-3 rounded-full text-lg ${
+                              isMimicked
+                                ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
+                                : "bg-orange-500 hover:bg-orange-600 text-white"
+                            }`}
                           >
-                            <Heart className={`w-7 h-7 mr-3 ${isLiked ? "fill-current" : ""}`} />
-                            <span className="text-lg">{post.like_count}</span>
-                          </Button>
-                          <Button variant="ghost" size="lg" className="text-gray-600">
-                            <MessageCircle className="w-7 h-7 mr-3" />
-                            <span className="text-lg">{comments.length}</span>
-                          </Button>
-                          <Button variant="ghost" size="lg" onClick={handleShare} className="text-gray-600">
-                            <Share2 className="w-7 h-7" />
+                            {isMimicked ? "真似済み" : "真似する"}
                           </Button>
                         </div>
-                        <Button
-                          onClick={handleMimic}
-                          size="lg"
-                          className={`px-8 py-3 rounded-full text-lg ${
-                            isMimicked
-                              ? "bg-orange-200 text-orange-800 hover:bg-orange-300"
-                              : "bg-orange-500 hover:bg-orange-600 text-white"
-                          }`}
-                        >
-                          {isMimicked ? "真似済み" : "真似する"}
-                        </Button>
+
+                        {/* 投稿者のみ表示：編集・削除ボタン（PC版） */}
+                        {isOwner && (
+                          <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={handleEdit}
+                              className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors px-4 py-2"
+                            >
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              編集
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={handleDelete}
+                              className="text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors px-4 py-2"
+                              disabled={loading}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              {loading ? "削除中..." : "削除"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
