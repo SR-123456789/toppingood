@@ -14,7 +14,17 @@ import { ResponsiveLayout } from "@/components/responsive-layout"
 import type { PostWithProfile } from "@/app/page"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
-const POPULAR_TAGS = ["カップヌードル", "白米", "アイスクリーム", "パン", "サラダ", "パスタ", "ラーメン", "おにぎり"]
+const POPULAR_TAGS = ["カップ麺", 
+  "ペヤング", 
+  // "アイスクリーム", 
+  "焼きそば", 
+  "サラダ", 
+  "パスタ", 
+  "ラーメン", 
+  "おにぎり",
+  "300円以下",
+  "500円以下"
+]
 
 export default function SearchPage() {
   const [posts, setPosts] = useState<PostWithProfile[]>([])
