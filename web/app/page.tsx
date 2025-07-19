@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { HomeClient } from "@/components/home-client"
 import type { Database } from "@/lib/types/database"
+import { shuffleArray, getHourlyTimeSeed, getDailyRandomOffset, getSessionSeed } from "@/lib/random-utils"
 
 type Post = Database["public"]["Tables"]["posts"]["Row"]
 type Profile = Database["public"]["Tables"]["profiles"]["Row"]
@@ -26,12 +27,25 @@ async function getPosts(): Promise<PostWithProfile[]> {
   const supabase = await createClient()
 
   try {
-    // 投稿を最新20件のみ取得（ページネーション対応）
+    // まず全体のデータ数を確認
+    const { count } = await supabase
+      .from("posts")
+      .select("*", { count: 'exact', head: true })
+
+    if (!count || count === 0) {
+      return []
+    }
+
+    // ランダム表示用の設定
+    const randomOffset = Math.min(getDailyRandomOffset(), Math.max(0, count - 50))
+    const timeSeed = getHourlyTimeSeed() + getSessionSeed()
+    const fetchLimit = Math.min(50, count)
+
     const { data: posts, error: postsError } = await supabase
       .from("posts")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(20) // 最新20件のみ取得
+      .range(randomOffset, randomOffset + fetchLimit - 1)
 
     if (postsError) {
       console.error("Error fetching posts:", postsError)
@@ -55,10 +69,14 @@ async function getPosts(): Promise<PostWithProfile[]> {
     }
 
     // 投稿とプロフィールを結合
-    const postsWithProfiles: PostWithProfile[] = posts.map((post) => ({
+    let postsWithProfiles: PostWithProfile[] = posts.map((post) => ({
       ...post,
       profile: profiles?.find((profile) => profile.id === post.user_id) || null,
     }))
+
+    // ランダムシャッフルして最初の20件を返す
+    postsWithProfiles = shuffleArray(postsWithProfiles, timeSeed)
+    postsWithProfiles = postsWithProfiles.slice(0, 20)
 
     return postsWithProfiles
   } catch (error) {

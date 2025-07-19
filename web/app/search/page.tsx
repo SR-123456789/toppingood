@@ -11,6 +11,7 @@ import { ArrowLeft, Search, Filter } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { ResponsiveLayout } from "@/components/responsive-layout"
+import { shuffleArray, getHourlyTimeSeed, getDailyRandomOffset, getSessionSeed } from "@/lib/random-utils"
 import type { PostWithProfile } from "@/app/page"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -38,6 +39,10 @@ export default function SearchPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  // 時間ベースのシード（30分ごとに変わる）+ セッションシード
+  const [timeSeed] = useState(() => getHourlyTimeSeed() + getSessionSeed())
+  const [randomOffset] = useState(() => getDailyRandomOffset())
+
   useEffect(() => {
     fetchPosts()
     checkUser()
@@ -58,21 +63,38 @@ export default function SearchPage() {
 
   const fetchPosts = async () => {
     try {
-      // 検索クエリがある場合は検索、ない場合は最新50件を取得
+      // まず全体のデータ数を確認
+      const { count } = await supabase
+        .from("posts")
+        .select("*", { count: 'exact', head: true })
+
+      if (!count || count === 0) {
+        setLoading(false)
+        return
+      }
+
+      // 検索・フィルタがない場合はランダム表示用に多めに取得
+      const fetchLimit = (!searchQuery && !selectedTag) ? Math.min(50, count) : 50
+      const actualOffset = (!searchQuery && !selectedTag) ? Math.min(randomOffset, Math.max(0, count - fetchLimit)) : 0
+
       let query = supabase
         .from("posts")
         .select("*")
         .order("created_at", { ascending: false })
 
-      // 検索クエリがある場合はフィルタリング
       if (searchQuery) {
         query = query.or(
           `menu_name.ilike.%${searchQuery}%,topping_content.ilike.%${searchQuery}%,memo.ilike.%${searchQuery}%`,
         )
       }
 
-      // 最大50件に制限
-      const { data: posts, error: postsError } = await query.limit(50)
+      if (!searchQuery && !selectedTag) {
+        query = query.range(actualOffset, actualOffset + fetchLimit - 1)
+      } else {
+        query = query.limit(fetchLimit)
+      }
+
+      const { data: posts, error: postsError } = await query
 
       if (postsError) {
         console.error("Error fetching posts:", postsError)
@@ -91,10 +113,17 @@ export default function SearchPage() {
         .select("id, username, display_name, avatar_url") // 必要なフィールドのみ
         .in("id", userIds)
 
-      const postsWithProfiles: PostWithProfile[] = posts.map((post) => ({
+      let postsWithProfiles: PostWithProfile[] = posts.map((post) => ({
         ...post,
         profile: profiles?.find((profile) => profile.id === post.user_id) || null,
       }))
+
+      // 検索・フィルタがない場合はランダムシャッフル
+      if (!searchQuery && !selectedTag) {
+        postsWithProfiles = shuffleArray(postsWithProfiles, timeSeed)
+        // 最初の50件に制限
+        postsWithProfiles = postsWithProfiles.slice(0, 50)
+      }
 
       setPosts(postsWithProfiles)
       setFilteredPosts(postsWithProfiles)
@@ -152,11 +181,25 @@ export default function SearchPage() {
 
     setIsLoadingMore(true)
     try {
+      // 全体のデータ数を確認
+      const { count } = await supabase
+        .from("posts")
+        .select("*", { count: 'exact', head: true })
+
+      if (!count || count === 0) {
+        setHasMore(false)
+        return
+      }
+
+      // ランダム表示用に多めに取得してシャッフル
+      const fetchLimit = 30
+      const actualOffset = Math.min(posts.length + randomOffset, Math.max(0, count - fetchLimit))
+
       const { data: morePosts, error } = await supabase
         .from("posts")
         .select("*")
         .order("created_at", { ascending: false })
-        .range(posts.length, posts.length + 19) // 次の20件を取得
+        .range(actualOffset, actualOffset + fetchLimit - 1)
 
       if (error) {
         console.error("Error loading more posts:", error)
@@ -175,15 +218,60 @@ export default function SearchPage() {
         .select("id, username, display_name, avatar_url")
         .in("id", userIds)
 
-      const postsWithProfiles: PostWithProfile[] = morePosts.map((post) => ({
+      let postsWithProfiles: PostWithProfile[] = morePosts.map((post) => ({
         ...post,
         profile: profiles?.find((profile) => profile.id === post.user_id) || null,
       }))
 
-      setPosts(prev => [...prev, ...postsWithProfiles])
-      setFilteredPosts(prev => [...prev, ...postsWithProfiles])
+      // ランダムシャッフルして20件に制限
+      postsWithProfiles = shuffleArray(postsWithProfiles, timeSeed + posts.length)
+      postsWithProfiles = postsWithProfiles.slice(0, 20)
+
+      // 既存の投稿IDと重複しないようにフィルタリング
+      const existingPostIds = new Set(posts.map(post => post.id))
+      const newUniquePosts = postsWithProfiles.filter(post => !existingPostIds.has(post.id))
+
+      if (newUniquePosts.length === 0) {
+        // 新しい投稿がない場合、さらに多くのデータを取得して再試行
+        const extendedLimit = 60
+        const extendedOffset = Math.min(posts.length + randomOffset + 30, Math.max(0, count - extendedLimit))
+        
+        const { data: extendedPosts, error: extendedError } = await supabase
+          .from("posts")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(extendedOffset, extendedOffset + extendedLimit - 1)
+
+        if (!extendedError && extendedPosts && extendedPosts.length > 0) {
+          const extendedUserIds = [...new Set(extendedPosts.map((post) => post.user_id))]
+          const { data: extendedProfiles } = await supabase
+            .from("profiles")
+            .select("id, username, display_name, avatar_url")
+            .in("id", extendedUserIds)
+
+          let extendedPostsWithProfiles: PostWithProfile[] = extendedPosts.map((post) => ({
+            ...post,
+            profile: extendedProfiles?.find((profile) => profile.id === post.user_id) || null,
+          }))
+
+          extendedPostsWithProfiles = shuffleArray(extendedPostsWithProfiles, timeSeed + posts.length + 1000)
+          const finalUniquePosts = extendedPostsWithProfiles.filter(post => !existingPostIds.has(post.id)).slice(0, 20)
+          
+          if (finalUniquePosts.length > 0) {
+            setPosts(prev => [...prev, ...finalUniquePosts])
+            setFilteredPosts(prev => [...prev, ...finalUniquePosts])
+          } else {
+            setHasMore(false)
+          }
+        } else {
+          setHasMore(false)
+        }
+      } else {
+        setPosts(prev => [...prev, ...newUniquePosts])
+        setFilteredPosts(prev => [...prev, ...newUniquePosts])
+      }
       
-      if (morePosts.length < 20) {
+      if (newUniquePosts.length < 20) {
         setHasMore(false)
       }
     } catch (error) {
@@ -191,7 +279,7 @@ export default function SearchPage() {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [posts.length, isLoadingMore, hasMore, searchQuery, selectedTag, supabase])
+  }, [posts, isLoadingMore, hasMore, searchQuery, selectedTag, supabase, timeSeed, randomOffset])
 
   // スクロール検知
   useEffect(() => {
