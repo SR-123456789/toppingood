@@ -36,7 +36,9 @@ export function SidebarNavigation({
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:left-0 lg:top-0 lg:h-full lg:bg-white lg:border-r lg:border-gray-200 lg:z-40">
       {/* ロゴ */}
       <div className="p-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-orange-600">ToppinGOOD</h1>
+        <h1 className="text-2xl font-bold text-orange-600">
+          <a href="/">ToppinGOOD</a>
+        </h1>
       </div>
 
       {/* ナビゲーションメニュー */}

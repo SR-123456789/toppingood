@@ -89,7 +89,9 @@ export default async function HomePage() {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center p-8">
-            <h1 className="text-2xl font-bold text-orange-600 mb-4">ToppinGOOD</h1>
+            <h1 className="text-2xl font-bold text-orange-600 mb-4">
+              <a href="/">ToppinGOOD</a>
+            </h1>
             <p className="text-gray-600 mb-4">データベースの初期化が必要です</p>
             <p className="text-sm text-gray-500">
               管理者にお問い合わせください。
@@ -111,7 +113,9 @@ export default async function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8">
-          <h1 className="text-2xl font-bold text-orange-600 mb-4">ToppinGOOD</h1>
+          <h1 className="text-2xl font-bold text-orange-600 mb-4">
+            <a href="/">ToppinGOOD</a>
+          </h1>
           <p className="text-gray-600 mb-4">エラーが発生しました</p>
           <p className="text-sm text-gray-500">
             ページを再読み込みしてください。
