@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { triggerHapticFeedback } from "@/lib/haptic-feedback"
@@ -32,6 +32,8 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
   const [error, setError] = useState<string | null>(null)
   const [showAuthSuccessMessage, setShowAuthSuccessMessage] = useState(false)
   const [isCreatingAccount, setIsCreatingAccount] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -172,6 +174,66 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
 
     fetchUserInteractions()
   }, [user, posts, supabase]) // postsも依存関係に追加
+
+  // 追加の投稿を読み込む関数
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return
+
+    setIsLoadingMore(true)
+    try {
+      const { data: morePosts, error } = await supabase
+        .from("posts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(posts.length, posts.length + 19) // 次の20件を取得
+
+      if (error) {
+        console.error("Error loading more posts:", error)
+        return
+      }
+
+      if (!morePosts || morePosts.length === 0) {
+        setHasMore(false)
+        return
+      }
+
+      // プロフィールも取得
+      const userIds = [...new Set(morePosts.map((post) => post.user_id))]
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", userIds)
+
+      const postsWithProfiles: PostWithProfile[] = morePosts.map((post) => ({
+        ...post,
+        profile: profiles?.find((profile) => profile.id === post.user_id) || null,
+      }))
+
+      setPosts(prev => [...prev, ...postsWithProfiles])
+      
+      // 20件未満なら最後のページ
+      if (morePosts.length < 20) {
+        setHasMore(false)
+      }
+    } catch (error) {
+      console.error("Error in loadMorePosts:", error)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [posts.length, isLoadingMore, hasMore, supabase])
+
+  // スクロール検知
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || isLoadingMore) {
+        return
+      }
+      loadMorePosts()
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [loadMorePosts, isLoadingMore])
 
   const requireLogin = (action: () => void) => {
     if (!user) {
@@ -317,15 +379,32 @@ export function HomeContainer({ user: initialUser, initialPosts }: HomeContainer
             onAction={handleCreatePost}
           />
         ) : (
-          <PostList
-            posts={posts}
-            likedPosts={likedPosts}
-            mimickedPosts={mimickedPosts}
-            onLike={handleLike}
-            onMimic={handleMimic}
-            onPostClick={handlePostClick}
-            formatTimeAgo={formatTimeAgo}
-          />
+          <>
+            <PostList
+              posts={posts}
+              likedPosts={likedPosts}
+              mimickedPosts={mimickedPosts}
+              onLike={handleLike}
+              onMimic={handleMimic}
+              onPostClick={handlePostClick}
+              formatTimeAgo={formatTimeAgo}
+            />
+            
+            {/* 無限スクロール用のローディング表示 */}
+            {isLoadingMore && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-500">さらに読み込み中...</p>
+              </div>
+            )}
+            
+            {/* 全て読み込み完了の表示 */}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-400">すべての投稿を表示しました</p>
+              </div>
+            )}
+          </>
         )}
       </main>
 

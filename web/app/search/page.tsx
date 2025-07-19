@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,8 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTag, setSelectedTag] = useState("")
   const [loading, setLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -134,6 +136,66 @@ export default function SearchPage() {
     router.push(`/post/${post.id}`)
   }
 
+  // 追加の投稿を読み込む関数
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingMore || !hasMore || searchQuery || selectedTag) return // 検索中は無効
+
+    setIsLoadingMore(true)
+    try {
+      const { data: morePosts, error } = await supabase
+        .from("posts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(posts.length, posts.length + 19) // 次の20件を取得
+
+      if (error) {
+        console.error("Error loading more posts:", error)
+        return
+      }
+
+      if (!morePosts || morePosts.length === 0) {
+        setHasMore(false)
+        return
+      }
+
+      // プロフィールも取得
+      const userIds = [...new Set(morePosts.map((post) => post.user_id))]
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", userIds)
+
+      const postsWithProfiles: PostWithProfile[] = morePosts.map((post) => ({
+        ...post,
+        profile: profiles?.find((profile) => profile.id === post.user_id) || null,
+      }))
+
+      setPosts(prev => [...prev, ...postsWithProfiles])
+      setFilteredPosts(prev => [...prev, ...postsWithProfiles])
+      
+      if (morePosts.length < 20) {
+        setHasMore(false)
+      }
+    } catch (error) {
+      console.error("Error in loadMorePosts:", error)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [posts.length, isLoadingMore, hasMore, searchQuery, selectedTag, supabase])
+
+  // スクロール検知
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || isLoadingMore) {
+        return
+      }
+      loadMorePosts()
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [loadMorePosts, isLoadingMore])
+
   return (
     <ResponsiveLayout user={user}>
       {/* モバイル版ヘッダー */}
@@ -221,37 +283,54 @@ export default function SearchPage() {
               <p className="text-sm text-gray-400">別のキーワードで検索してみてください</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-4">
-              {filteredPosts.map((post) => (
-                <Card
-                  key={post.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow border-0"
-                  onClick={() => handlePostClick(post)}
-                >
-                  <CardContent className="p-0">
-                    <div className="relative aspect-square">
-                      <Image
-                        src={post.image_urls?.[0] || "/placeholder.svg?height=150&width=150"}
-                        alt={`${post.menu_name}のトッピング`}
-                        fill
-                        className="object-cover rounded-lg"
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-end">
-                        <div className="p-2 text-white opacity-0 hover:opacity-100 transition-opacity">
-                          <p className="text-xs font-semibold truncate">{post.menu_name}</p>
-                          <p className="text-xs truncate">{post.topping_content}</p>
+            <>
+              <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-4">
+                {filteredPosts.map((post) => (
+                  <Card
+                    key={post.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow border-0"
+                    onClick={() => handlePostClick(post)}
+                  >
+                    <CardContent className="p-0">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={post.image_urls?.[0] || "/placeholder.svg?height=150&width=150"}
+                          alt={`${post.menu_name}のトッピング`}
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-end">
+                          <div className="p-2 text-white opacity-0 hover:opacity-100 transition-opacity">
+                            <p className="text-xs font-semibold truncate">{post.menu_name}</p>
+                            <p className="text-xs truncate">{post.topping_content}</p>
+                          </div>
+                        </div>
+                        <div className="absolute top-2 right-2">
+                          <Badge variant="secondary" className="bg-white bg-opacity-90 text-xs">
+                            {post.mimic_count}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="absolute top-2 right-2">
-                        <Badge variant="secondary" className="bg-white bg-opacity-90 text-xs">
-                          {post.mimic_count}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {/* 無限スクロール用のローディング表示 */}
+              {isLoadingMore && !searchQuery && !selectedTag && (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-500">さらに読み込み中...</p>
+                </div>
+              )}
+              
+              {/* 全て読み込み完了の表示 */}
+              {!hasMore && filteredPosts.length > 0 && !searchQuery && !selectedTag && (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-400">すべての投稿を表示しました</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
