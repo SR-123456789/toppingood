@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const ALLOWED_UA = [
-  'ToppifyGO-App iOS', // 例：Googlebotだけ許可
+  'ToppifyGO-App iOS',
   'admin'
 ]
 
 export function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || ''
 
-  // どれか一つでも一致したら許可
+  // UAが許可されていればOK
   if (ALLOWED_UA.some(ua => userAgent.includes(ua))) {
     return NextResponse.next()
   }
@@ -18,7 +18,10 @@ export function middleware(request: NextRequest) {
   return new NextResponse('Forbidden', { status: 403 })
 }
 
-// 必要ならマッチさせたいパスを限定
-// export const config = {
-//   matcher: '/((?!api|_next/static|_next/image|favicon.ico).*)',
-// }
+// ✅ middlewareを適用する対象を限定
+export const config = {
+  matcher: [
+    // APIや_nextなどは除外（通常の静的リソース含む）
+    '/((?!_next/static|_next/image|favicon.ico|public|.*\\.\\w+$).*)',
+  ],
+}
