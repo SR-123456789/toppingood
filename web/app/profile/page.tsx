@@ -8,11 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Edit, Save, X, Camera, Users, Heart, ChefHat } from "lucide-react"
+import { ArrowLeft, Edit, Save, X, Camera, Users, Heart, ChefHat, Trash2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { triggerHapticFeedback } from "@/lib/haptic-feedback"
 import { LoginDialog } from "@/components/auth/login-dialog"
 import { ResponsiveLayout } from "@/components/responsive-layout"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface UserStats {
@@ -50,6 +51,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -196,6 +198,39 @@ export default function ProfilePage() {
     triggerHapticFeedback('heavy') // ログアウトは重要なアクション
     await supabase.auth.signOut()
     router.push("/")
+  }
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true)
+    triggerHapticFeedback('heavy') // アカウント削除は重要なアクション
+
+    try {
+      const response = await fetch('/api/delete-account', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'アカウント削除に失敗しました')
+      }
+
+      // 削除成功後、ログアウトしてホームに遷移
+      await supabase.auth.signOut()
+      router.push('/')
+      
+      // 成功メッセージ
+      alert('アカウントが正常に削除されました')
+
+    } catch (error) {
+      console.error('Delete account error:', error)
+      alert('アカウント削除に失敗しました。しばらく待ってから再度お試しください。')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleLoginSuccess = () => {
@@ -410,6 +445,41 @@ export default function ProfilePage() {
                     <Button variant="ghost" className="w-full justify-start text-red-600" onClick={handleLogout}>
                       ログアウト
                     </Button>
+                    
+                    {/* アカウント削除 */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-start text-red-600 hover:bg-red-50">
+                          <Trash2 className="w-5 h-5 mr-3" />
+                          アカウント削除
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>アカウントを削除しますか？</AlertDialogTitle>
+                          <AlertDialogDescription className="space-y-2">
+                            <p>この操作は取り消すことができません。</p>
+                            <p>以下のデータがすべて削除されます：</p>
+                            <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                              <li>プロフィール情報</li>
+                              <li>投稿したすべての料理</li>
+                              <li>いいねや真似の履歴</li>
+                              <li>アカウント情報</li>
+                            </ul>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleDeleteAccount}
+                            disabled={isDeleting}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            {isDeleting ? '削除中...' : '削除する'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </CardContent>
                 </Card>
               </div>
