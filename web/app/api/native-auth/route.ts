@@ -14,12 +14,15 @@ const supabaseAdmin = createClient(
     }
   }
 )
+const NATIVE_USER_AGENT = 'ToppifyGO-App iOS dess'
+
+
 
 export async function POST(request: NextRequest) {
   try {
     // User-Agentでネイティブアプリかチェック
     const userAgent = request.headers.get('user-agent') || ''
-    if (!userAgent.includes('ToppifyGO-App iOS')) {
+    if (!userAgent.includes(NATIVE_USER_AGENT)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

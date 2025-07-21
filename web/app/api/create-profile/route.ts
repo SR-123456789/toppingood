@@ -14,6 +14,9 @@ const supabaseAdmin = createClient(
   }
 )
 
+const NATIVE_USER_AGENT = 'ToppifyGO-App iOS dess'
+
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json()
@@ -24,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // User-Agentをチェック
     const userAgent = request.headers.get('user-agent') || ''
-    if (!userAgent.includes('ToppifyGO-App iOS')) {
+    if (!userAgent.includes(NATIVE_USER_AGENT)) {
       return NextResponse.json({ error: 'Unauthorized', userAgent }, { status: 401 })
     }
 
